@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.abi.expensetracker.ui.components.SyncSmsControl
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -56,7 +57,8 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountsScreen(
-    vm: AccountsViewModel = viewModel()
+    vm: AccountsViewModel = viewModel(),
+    resetSignal: Int = 0
 ) {
     val banks by vm.banks.collectAsStateWithLifecycle()
     val senders by vm.senders.collectAsStateWithLifecycle()
@@ -80,6 +82,12 @@ fun AccountsScreen(
     var addingBank by remember { mutableStateOf(false) }
 
     val pendingCount = senders.count { it.bankId == null }
+    val listState = rememberLazyListState()
+    // Tapping Accounts while on it: sheet closed, top of the list.
+    OnTabReselect(resetSignal) {
+        senderSearchOpen = false
+        listState.scrollToItem(0)
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -95,6 +103,7 @@ fun AccountsScreen(
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.padding(padding).fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)

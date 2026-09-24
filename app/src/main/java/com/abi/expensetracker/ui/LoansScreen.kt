@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.abi.expensetracker.ui.theme.ChipShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.outlined.CloudOff
@@ -103,7 +104,7 @@ import java.time.ZoneId
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun LoansScreen(vm: LoansViewModel = viewModel()) {
+fun LoansScreen(vm: LoansViewModel = viewModel(), resetSignal: Int = 0) {
     val state by vm.state.collectAsStateWithLifecycle()
     val nepaliDates by vm.useNepaliCalendar.collectAsStateWithLifecycle()
     var openPerson by rememberSaveable { mutableStateOf<String?>(null) }
@@ -118,6 +119,13 @@ fun LoansScreen(vm: LoansViewModel = viewModel()) {
         state.people.firstOrNull { it.name.equals(name, ignoreCase = true) }
     }
     if (openPerson != null) BackHandler { openPerson = null }
+    val listState = rememberLazyListState()
+    // Tapping Loans while on it: back to the people list, All, top.
+    OnTabReselect(resetSignal) {
+        openPerson = null
+        filter = LoanFilter.ALL
+        listState.scrollToItem(0)
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -146,6 +154,7 @@ fun LoansScreen(vm: LoansViewModel = viewModel()) {
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.padding(padding).fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(0.dp)

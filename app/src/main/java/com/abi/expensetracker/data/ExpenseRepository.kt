@@ -521,10 +521,10 @@ class ExpenseRepository(
         updated.size
     }
 
-    suspend fun addCategory(name: String, icon: String, keywords: String): Long =
+    suspend fun addCategory(name: String, keywords: String, color: Int?): Long =
         withContext(Dispatchers.IO) {
             db.categoryDao().insert(
-                Category(name = name.trim(), icon = icon.trim(), keywords = keywords.trim())
+                Category(name = name.trim(), keywords = keywords.trim(), color = color)
             )
         }
 

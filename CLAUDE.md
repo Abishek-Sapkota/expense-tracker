@@ -34,7 +34,7 @@ convention listed here, update the matching line in the same change.
   `Split` (bill txn split with friends: title, total, myShare; backup since schema 9),
   `BankApp` (packageName+bankId: apps whose notifications belong to a bank; one app may
   serve several banks; backup since schema 10).
-- `data/db/` — `AppDatabase` (version 11, migrations 1→11 inline; schemas in
+- `data/db/` — `AppDatabase` (version 12, migrations 1→12 inline; schemas in
   `app/schemas/`), `Daos.kt` (all DAOs; spent/received/debits/category-total queries exclude
   txns linked to a loan entry), `TxnWithSender` + query result classes.
 - `data/ExpenseRepository.kt` — single data API used by ViewModels (ingest, reparse,
@@ -49,7 +49,8 @@ convention listed here, update the matching line in the same change.
 - `data/` misc — `Money` (paise Long, `रु` lakh formatting), `Period`/`CalendarDates`/
   `NepaliCalendar`, `Splits` (equal-share math, split summaries from loan entries),
   `AppIconRef` (`app:<pkg>` icons, `appLabel()` resolves notification package → app name),
-  `Categorizer` (keyword auto-category), `DuplicateMatcher` (SMS vs
+  `CategoryColors` (12-colour palette; `Category.color` or a stable default by id;
+  Uncategorised is grey), `Categorizer` (keyword auto-category), `DuplicateMatcher` (SMS vs
   email/notification copy of same txn: same amount+direction, ±60 min, different sender,
   one copy per sender, remark lead token must agree; user-edited rows are never merged
   by reparse). One SMS can also arrive as a `com.google.android.apps.messaging`
@@ -90,10 +91,12 @@ convention listed here, update the matching line in the same change.
 - `ui/DuplicatesScreen.kt` + `DuplicatesViewModel.kt` — folded copies by arrival date
   (default Today, `PeriodChips`/`DateRangeDialog` reused from HomeScreen), "Not a
   duplicate" button. Opened from Ledger top bar, drawn in place of HomeScreen.
-- `ui/TrendsScreen.kt` — tapping a category row opens `CategoryTransactions` (that
-  category's month debits via `observeCategoryDebits`, loans excluded; Back returns).
+- `ui/TrendsScreen.kt` — tapping a category row opens the real ledger (`HomeScreen` with
+  `categoryView`, a keyed `HomeViewModel` put in category mode by `showCategory(range, id)`
+  → `observeCategoryDebits`, loans excluded): same rows, edit popup, select/delete; Back
+  returns. Daily bars are stacked by category colour; breakdown bars use category colour.
 - `ui/TrendsScreen`, `TemplatesScreen`, `AccountsScreen`, `SettingsScreen` (+ ViewModels),
-  `CategorySettings.kt` (category editor: name + keywords).
+  `CategorySettings.kt` (category editor: name, colour, keywords).
 - `ui/components/` — `Ledger.kt` (LedgerCard, PeriodHeroCard, GroupedRow, SectionHeader,
   Monogram, banners), `SearchableDropdown` (generic filterable dropdown; nullable item
   for "none" row), `AppIcon`, `Permissions`.
@@ -118,6 +121,9 @@ Tests: `app/src/test/java/com/abi/expensetracker/{data,parser,notification,ui}/`
 - Money is `Long` minor units (paise), never Double.
 - Insets: edge-to-edge. Outer Scaffold in `MainActivity` has zero `contentWindowInsets` and
   consumes its padding; each tab's own Scaffold/TopAppBar handles the status bar.
+- Tab reselect: `MainActivity` counts taps on the already-open tab and passes
+  `resetSignal` to each screen; `OnTabReselect` (Navigation.kt) resets sub-pages, filters and
+  scroll. Switching tabs keeps state (sub-page flags are `rememberSaveable`).
 - Top bars: `TopAppBar(expandedHeight = 52.dp)` and lists use 4dp top content padding, so
   content sits right under the title (no gap). Keep this on new screens.
 - ViewModels are `AndroidViewModel`, get repository via `ServiceLocator`, expose

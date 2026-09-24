@@ -1,5 +1,8 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material.icons.outlined.ContentCopy
 import android.Manifest
 import android.content.pm.PackageManager
@@ -57,6 +60,13 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/** What the Trends drill-down shows: one category over one month. */
+data class CategoryView(
+    val title: String,
+    val subtitle: String,
+    val totalMinor: Long
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -64,7 +74,11 @@ fun HomeScreen(
     /** Driven by the add button on the bottom bar, which is outside this screen. */
     showAddDialog: Boolean,
     onAddDialogClose: () -> Unit,
-    vm: HomeViewModel = viewModel()
+    vm: HomeViewModel = viewModel(),
+    /** Set for the Trends drill-down: a titled, filtered ledger with a back arrow. */
+    categoryView: CategoryView? = null,
+    onBack: () -> Unit = {},
+    resetSignal: Int = 0
 ) {
     val context = LocalContext.current
     val rows by vm.rows.collectAsStateWithLifecycle()
@@ -82,7 +96,9 @@ fun HomeScreen(
     }
     var editing by remember { mutableStateOf<com.abi.expensetracker.data.model.Txn?>(null) }
     var showRangePicker by remember { mutableStateOf(false) }
-    var showDuplicates by remember { mutableStateOf(false) }
+    // Saveable, so leaving the tab and coming back finds Duplicates still open.
+    var showDuplicates by rememberSaveable { mutableStateOf(false) }
+    val listState = rememberLazyListState()
     val loans by vm.loans.collectAsStateWithLifecycle()
     val duplicateCount by vm.duplicateCount.collectAsStateWithLifecycle()
     var loanDraft by remember { mutableStateOf<LoanEntry?>(null) }
@@ -100,6 +116,15 @@ fun HomeScreen(
     }
 
     BackHandler(enabled = selecting) { selectedIds = emptySet() }
+    BackHandler(enabled = categoryView != null && !selecting, onBack = onBack)
+
+    // Tapping Ledger while on it returns it to how it opens: Today, top of the list.
+    OnTabReselect(resetSignal) {
+        showDuplicates = false
+        selectedIds = emptySet()
+        vm.selectPeriod(Period.TODAY)
+        listState.scrollToItem(0)
+    }
 
     // Drawn in place of the ledger rather than as a tab: it is a review queue reached from
     // the ledger, and the bottom bar stays where it is.
@@ -147,7 +172,14 @@ fun HomeScreen(
             } else {
                 TopAppBar(
                     expandedHeight = 52.dp,
-                    title = { Text("Ledger", style = MaterialTheme.typography.headlineSmall) },
+                    title = { Text(categoryView?.title ?: "Ledger", style = MaterialTheme.typography.headlineSmall) },
+                    navigationIcon = {
+                        if (categoryView != null) {
+                            IconButton(onClick = onBack) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            }
+                        }
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background
                     )
@@ -156,13 +188,21 @@ fun HomeScreen(
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.padding(padding).fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
             // No global gap: transaction rows butt together to read as one card, and
             // everything else carries its own bottom padding instead.
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            item {
+            if (categoryView != null) item {
+                SectionHeader(
+                    title = categoryView.subtitle,
+                    trailing = Money.format(categoryView.totalMinor),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+            if (categoryView == null) item {
                 Row(
                     Modifier.fillMaxWidth().padding(bottom = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -180,7 +220,7 @@ fun HomeScreen(
                     )
                 }
             }
-            item {
+            if (categoryView == null) item {
                 Box(Modifier.padding(bottom = 12.dp)) { PeriodChips(
                     selected = selection.period,
                     onSelect = { period ->
@@ -189,7 +229,7 @@ fun HomeScreen(
                 ) }
             }
 
-            item {
+            if (categoryView == null) item {
                 PeriodHeroCard(
                     // A single day also names its date, on the calendar the user reads.
                     periodLabel = when (selection.period) {
@@ -207,7 +247,7 @@ fun HomeScreen(
                 )
             }
 
-            if (!hasSmsPermission) {
+            if (!hasSmsPermission && categoryView == null) {
                 item {
                   Box(Modifier.padding(bottom = 12.dp)) {
                     NudgeBanner(
@@ -242,7 +282,7 @@ fun HomeScreen(
                 }
             }
 
-            item {
+            if (categoryView == null) item {
                 Box(Modifier.padding(bottom = 12.dp)) {
                     SectionHeader(
                         title = "Transactions",

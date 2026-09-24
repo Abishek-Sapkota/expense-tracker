@@ -1,5 +1,10 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.abi.expensetracker.ui.components.GroupPosition
 import com.abi.expensetracker.ui.components.GroupedRow
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -76,17 +81,33 @@ import kotlin.math.abs
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TrendsScreen(vm: TrendsViewModel = viewModel()) {
+fun TrendsScreen(vm: TrendsViewModel = viewModel(), resetSignal: Int = 0) {
     val state by vm.state.collectAsStateWithLifecycle()
     val window by vm.window.collectAsStateWithLifecycle()
     val canGoForward by vm.canGoForward.collectAsStateWithLifecycle()
     val openCategory by vm.openCategory.collectAsStateWithLifecycle()
-    val categoryRows by vm.categoryRows.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
 
-    // A tapped category takes over the tab with its own transactions; Back returns.
+    // Tapping Trends while on it: current month, breakdown closed, top of the page.
+    OnTabReselect(resetSignal) {
+        vm.openCategory(null)
+        vm.resetMonth()
+        listState.scrollToItem(0)
+    }
+
+    // A tapped category takes over the tab with the ledger itself, filtered to that
+    // category and month: same rows, edit popup, selection and delete. Back returns.
     openCategory?.let { slice ->
-        BackHandler { vm.openCategory(null) }
-        CategoryTransactions(slice, window.label, categoryRows, onBack = { vm.openCategory(null) })
+        val ledger: HomeViewModel = viewModel(key = "trends-category")
+        LaunchedEffect(slice.categoryId, window) { ledger.showCategory(window.range, slice.categoryId) }
+        HomeScreen(
+            onOpenSettings = {},
+            showAddDialog = false,
+            onAddDialogClose = {},
+            vm = ledger,
+            categoryView = CategoryView(slice.name, window.label, slice.amountMinor),
+            onBack = { vm.openCategory(null) }
+        )
         return
     }
 
@@ -103,6 +124,7 @@ fun TrendsScreen(vm: TrendsViewModel = viewModel()) {
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.padding(padding).fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -367,12 +389,11 @@ private fun DailySpendCard(state: TrendsState, window: com.abi.expensetracker.da
  */
 @Composable
 private fun SpendBars(daily: List<DailySpend>, busiestDay: Int?, modifier: Modifier = Modifier) {
-    val strong = MaterialTheme.colorScheme.primary
-    val pale = MaterialTheme.colorScheme.primaryContainer
     val guide = MaterialTheme.colorScheme.outlineVariant
+    val empty = MaterialTheme.colorScheme.surfaceContainerHigh
     val peak = daily.maxOfOrNull { it.amountMinor } ?: 0L
 
-    // The busiest-day line beneath carries the same information precisely.
+    // The breakdown beneath carries the same information precisely.
     Canvas(modifier.clearAndSetSemantics { }) {
         if (daily.isEmpty() || peak <= 0L) return@Canvas
         listOf(0.25f, 0.6f).forEach { at ->
@@ -380,15 +401,22 @@ private fun SpendBars(daily: List<DailySpend>, busiestDay: Int?, modifier: Modif
         }
         val slot = size.width / daily.size
         val barWidth = slot * 0.62f
-        val radius = CornerRadius(barWidth / 3f)
         daily.forEachIndexed { index, point ->
-            val h = (point.amountMinor.toFloat() / peak * size.height).coerceAtLeast(2f)
-            drawRoundRect(
-                color = if (point.day == busiestDay) strong else pale,
-                topLeft = Offset(index * slot + (slot - barWidth) / 2f, size.height - h),
-                size = Size(barWidth, h),
-                cornerRadius = radius
-            )
+            val left = index * slot + (slot - barWidth) / 2f
+            if (point.amountMinor <= 0L || point.segments.isEmpty()) {
+                // A quiet day is a real zero, drawn as a sliver.
+                drawRect(empty, Offset(left, size.height - 2f), Size(barWidth, 2f))
+                return@forEachIndexed
+            }
+            // Stacked by category, biggest at the bottom, in each category's colour.
+            val barHeight = point.amountMinor.toFloat() / peak * size.height
+            val sum = point.segments.sumOf { it.second }.toFloat()
+            var bottom = size.height
+            point.segments.forEach { (argb, amount) ->
+                val h = amount / sum * barHeight
+                drawRect(Color(argb), Offset(left, bottom - h), Size(barWidth, h))
+                bottom -= h
+            }
         }
     }
 }
@@ -406,6 +434,7 @@ private fun CategoryCard(slices: List<CategorySlice>, onOpen: (CategorySlice) ->
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Box(Modifier.size(12.dp).background(Color(slice.color), CircleShape))
                     Column(Modifier.weight(1f)) {
                         Text(slice.name, style = MaterialTheme.typography.bodyLarge)
                         Text(
@@ -426,102 +455,13 @@ private fun CategoryCard(slices: List<CategorySlice>, onOpen: (CategorySlice) ->
                 LinearProgressIndicator(
                     progress = { slice.shareOfTotal.coerceIn(0f, 1f) },
                     modifier = Modifier.fillMaxWidth().height(6.dp).clearAndSetSemantics { },
-                    color = if (slice.categoryId == null) MaterialTheme.colorScheme.outline
-                    else MaterialTheme.colorScheme.primary,
+                    color = Color(slice.color),
                     trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     drawStopIndicator = {}
                 )
             }
             if (index < slices.lastIndex) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            }
-        }
-    }
-}
-
-/**
- * One category's spending for the month on screen: the drill-down from the breakdown.
- * Split repayments are not netted per row here; the breakdown total already accounts for
- * them.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CategoryTransactions(
-    slice: CategorySlice,
-    monthLabel: String,
-    rows: List<Pair<com.abi.expensetracker.data.db.TxnWithSender, String?>>,
-    onBack: () -> Unit
-) {
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                expandedHeight = 52.dp,
-                title = { Text(slice.name, style = MaterialTheme.typography.headlineSmall) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to trends")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-            )
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier.padding(padding).fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp)
-        ) {
-            item {
-                SectionHeader(
-                    title = monthLabel,
-                    trailing = Money.format(slice.amountMinor),
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-            }
-            if (rows.isEmpty()) {
-                item {
-                    LedgerCard {
-                        Text(
-                            "No transactions in this category this month.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                }
-            }
-            itemsIndexed(rows, key = { _, r -> r.first.txn.id }) { index, (row, account) ->
-                val txn = row.txn
-                GroupedRow(position = GroupPosition.of(index, rows.size), onClick = {}) {
-                    Row(
-                        Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                txn.merchant ?: txn.remark ?: "Unknown",
-                                style = MaterialTheme.typography.titleSmall,
-                                maxLines = 1
-                            )
-                            Text(
-                                listOfNotNull(
-                                    account ?: if (txn.isManual) "Added by you" else null,
-                                    java.time.Instant.ofEpochMilli(txn.occurredAt)
-                                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-                                        .let { CalendarDates.dayLabel(it, false) }
-                                ).joinToString(" · "),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Text(
-                            Money.formatSigned(txn.amountMinor, isCredit = false),
-                            style = MaterialTheme.typography.titleSmall.merge(LocalTabularStyle.current),
-                            color = AppTheme.finance.debit
-                        )
-                    }
-                }
             }
         }
     }

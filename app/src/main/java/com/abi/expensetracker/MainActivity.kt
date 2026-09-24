@@ -23,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -87,6 +88,8 @@ class MainActivity : ComponentActivity() {
                 // Owned here because the add button lives on the bar while the dialog
                 // belongs to the ledger: the bar cannot reach into HomeScreen's state.
                 var addOpen by remember { mutableStateOf(false) }
+                /** Taps on the tab already open, per tab; each screen resets when its count rises. */
+                val reselects = remember { mutableStateMapOf<Destination, Int>() }
 
                 fun go(destination: Destination) {
                     val target = tabs.indexOf(destination)
@@ -138,7 +141,18 @@ class MainActivity : ComponentActivity() {
                     // No insets of its own: each tab's top bar already pads for the status
                     // bar, and padding here too left a blank band above every title.
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                    bottomBar = { LedgerBottomBar(selected = current, onSelect = ::go) },
+                    bottomBar = {
+                        LedgerBottomBar(
+                            selected = current,
+                            // The tab already open resets to how it first opens; any other
+                            // tab is simply shown, in whatever state it was left.
+                            onSelect = { destination ->
+                                if (destination == current) {
+                                    reselects[destination] = (reselects[destination] ?: 0) + 1
+                                } else go(destination)
+                            }
+                        )
+                    },
                     floatingActionButton = {
                         // Only where it does something. On Templates or Settings it would be
                         // an action pointing at a list that is not on screen.
@@ -164,12 +178,13 @@ class MainActivity : ComponentActivity() {
                             Destination.HOME -> HomeScreen(
                                 onOpenSettings = { go(Destination.SETTINGS) },
                                 showAddDialog = addOpen,
-                                onAddDialogClose = { addOpen = false }
+                                onAddDialogClose = { addOpen = false },
+                                resetSignal = reselects[Destination.HOME] ?: 0
                             )
-                            Destination.TRENDS -> TrendsScreen()
-                            Destination.LOANS -> LoansScreen()
-                            Destination.ACCOUNTS -> AccountsScreen()
-                            Destination.SETTINGS -> SettingsScreen()
+                            Destination.TRENDS -> TrendsScreen(resetSignal = reselects[Destination.TRENDS] ?: 0)
+                            Destination.LOANS -> LoansScreen(resetSignal = reselects[Destination.LOANS] ?: 0)
+                            Destination.ACCOUNTS -> AccountsScreen(resetSignal = reselects[Destination.ACCOUNTS] ?: 0)
+                            Destination.SETTINGS -> SettingsScreen(resetSignal = reselects[Destination.SETTINGS] ?: 0)
                         }
                     }
                 }

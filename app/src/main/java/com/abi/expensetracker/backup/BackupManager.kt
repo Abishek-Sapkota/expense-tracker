@@ -136,6 +136,7 @@ class BackupManager(
                 // had typed.
                 w.name("icon").value(c.icon)
                 w.name("keywords").value(c.keywords)
+                w.name("color").value(c.color)
                 w.endObject()
             }
             w.endArray()
@@ -464,7 +465,7 @@ class BackupManager(
         val categories = ArrayList<Category>()
         r.beginArray()
         while (r.hasNext()) {
-            var id = 0L; var name = ""; var icon = ""; var keywords = ""
+            var id = 0L; var name = ""; var icon = ""; var keywords = ""; var color: Int? = null
             r.beginObject()
             while (r.hasNext()) {
                 when (r.nextName()) {
@@ -472,12 +473,13 @@ class BackupManager(
                     "name" -> name = r.nextString()
                     // Absent in schema 5 and older, where a category carried neither.
                     "icon" -> icon = r.nextStringOrNull().orEmpty()
+                    "color" -> color = if (r.peek() == JsonToken.NULL) { r.nextNull(); null } else r.nextInt()
                     "keywords" -> keywords = r.nextStringOrNull().orEmpty()
                     else -> r.skipValue()
                 }
             }
             r.endObject()
-            if (name.isNotEmpty()) categories += Category(id, name, icon, keywords)
+            if (name.isNotEmpty()) categories += Category(id, name, icon, keywords, color)
         }
         r.endArray()
         if (categories.isNotEmpty()) db.categoryDao().insertAll(categories)

@@ -77,7 +77,8 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    vm: SettingsViewModel = viewModel()
+    vm: SettingsViewModel = viewModel(),
+    resetSignal: Int = 0
 ) {
     val context = LocalContext.current
     val status by vm.status.collectAsStateWithLifecycle()
@@ -113,6 +114,12 @@ fun SettingsScreen(
     val today = remember { SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()) }
 
     val section = openSection
+    val scroll = rememberScrollState()
+    // Tapping Settings while on it: back to the menu, top.
+    OnTabReselect(resetSignal) {
+        openSection = null
+        scroll.scrollTo(0)
+    }
     var addingCategory by remember { mutableStateOf(false) }
     if (section != null) BackHandler { openSection = null }
 
@@ -158,7 +165,7 @@ fun SettingsScreen(
                 .padding(padding)
                 .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scroll),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             when (section) {

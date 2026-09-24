@@ -1,6 +1,6 @@
 package com.abi.expensetracker.ui
 
-import com.abi.expensetracker.data.BankResolver
+import com.abi.expensetracker.data.CategoryColors
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,14 +21,21 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /** Spend on one day of the window. [day] is 1-based, matching the calendar. */
-data class DailySpend(val day: Int, val amountMinor: Long)
+data class DailySpend(
+    val day: Int,
+    val amountMinor: Long,
+    /** The day's spend split by category colour (ARGB to amount), largest category first. */
+    val segments: List<Pair<Int, Long>> = emptyList()
+)
 
 /** One bar of the category breakdown. A null [categoryId] is the uncategorised bucket. */
 data class CategorySlice(
     val categoryId: Long?,
     val name: String,
     val amountMinor: Long,
-    val shareOfTotal: Float
+    val shareOfTotal: Float,
+    /** ARGB from [com.abi.expensetracker.data.CategoryColors]. */
+    val color: Int
 )
 
 data class TrendsState(
@@ -66,22 +73,6 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openCategory(slice: CategorySlice?) { _openCategory.value = slice }
 
-    private val resolver = combine(
-        repository.observeBanks(), repository.observeSenderLinks(), repository.observeBankApps()
-    ) { banks, links, apps -> BankResolver(banks, links, apps) }
-
-    /** The open category's spending this month, each with the account it came through. */
-    // Lazy: it reads [window], which is declared further down.
-    val categoryRows: StateFlow<List<Pair<com.abi.expensetracker.data.db.TxnWithSender, String?>>> by lazy {
-        combine(window, _openCategory) { w, c -> w to c }
-            .flatMapLatest { (w, c) ->
-                if (c == null) kotlinx.coroutines.flow.flowOf(emptyList())
-                else combine(repository.observeCategoryDebits(w.range, c.categoryId), resolver) { rows, r ->
-                    rows.map { it to r.bankFor(it.sender, it.body)?.name }
-                }
-            }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    }
 
     /**
      * The month on screen, on whichever calendar the user reads.
@@ -100,6 +91,9 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
             SharingStarted.WhileSubscribed(5_000),
             MonthWindow.of(LocalDate.now(), nepali = false)
         )
+
+    /** Back to the month containing today. */
+    fun resetMonth() { _anchor.value = LocalDate.now() }
 
     fun previousMonth() {
         _anchor.value = window.value.previous.firstDay
@@ -135,16 +129,26 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
             // means embedding a timezone offset in the query, which is wrong twice a year
             // and wrong permanently for anyone who travels.
             val byDay = LongArray(window.dayCount)
+            // The same days split by category, for the stacked bars.
+            val byDayCategory = Array(window.dayCount) { mutableMapOf<Long?, Long>() }
             debits.forEach { txn ->
                 // Day of the window, not day of the Gregorian month: a Nepali month
                 // starts mid-month and would otherwise scatter its spending across the
                 // wrong bars.
                 val date = Instant.ofEpochMilli(txn.occurredAt).atZone(zone).toLocalDate()
-                window.dayOf(date)?.let { day -> byDay[day - 1] += txn.amountMinor }
+                window.dayOf(date)?.let { day ->
+                    byDay[day - 1] += txn.amountMinor
+                    val m = byDayCategory[day - 1]
+                    m[txn.categoryId] = (m[txn.categoryId] ?: 0L) + txn.amountMinor
+                }
             }
             recoveries.forEach { r ->
                 val date = Instant.ofEpochMilli(r.occurredAt).atZone(zone).toLocalDate()
-                window.dayOf(date)?.let { day -> byDay[day - 1] -= r.recoveredMinor }
+                window.dayOf(date)?.let { day ->
+                    byDay[day - 1] -= r.recoveredMinor
+                    val m = byDayCategory[day - 1]
+                    m[r.categoryId] = (m[r.categoryId] ?: 0L) - r.recoveredMinor
+                }
             }
 
             val total = debits.sumOf { it.amountMinor } - recoveries.sumOf { it.recoveredMinor }
@@ -157,14 +161,25 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
                         categoryId = row.categoryId,
                         name = category?.name ?: "Uncategorised",
                         amountMinor = row.totalMinor,
-                        shareOfTotal = if (total <= 0L) 0f else row.totalMinor.toFloat() / total
+                        shareOfTotal = if (total <= 0L) 0f else row.totalMinor.toFloat() / total,
+                        color = CategoryColors.of(category)
                     )
                 }
+            // Stack each day in the breakdown's order, so the biggest category sits at the
+            // bottom of every bar and colours line up across days.
+            val rank = slices.mapIndexed { i, s -> s.categoryId to i }.toMap()
+            val colorOf = { id: Long? -> CategoryColors.of(id?.let { categoryById[it] }) }
 
             TrendsState(
                 totalMinor = total,
                 previousTotalMinor = previousTotal,
-                daily = byDay.mapIndexed { index, amount -> DailySpend(index + 1, amount) },
+                daily = byDay.mapIndexed { index, amount ->
+                    val parts = byDayCategory[index].toList()
+                        .filter { (_, value) -> value > 0 }
+                        .sortedBy { (id, _) -> rank[id] ?: Int.MAX_VALUE }
+                        .map { (id, value) -> colorOf(id) to value }
+                    DailySpend(index + 1, amount, parts)
+                },
                 categories = slices,
                 recordedDays = byDay.count { it > 0L },
                 loanExcludedMinor = loanDebits,

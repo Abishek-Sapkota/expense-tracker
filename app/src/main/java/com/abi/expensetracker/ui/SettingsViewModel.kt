@@ -120,9 +120,9 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     val categories: StateFlow<List<Category>> = repository.observeCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun addCategory(name: String, icon: String, keywords: String) {
+    fun addCategory(name: String, keywords: String, color: Int?) {
         if (name.isBlank()) return
-        viewModelScope.launch { repository.addCategory(name, icon, keywords) }
+        viewModelScope.launch { repository.addCategory(name, keywords, color) }
     }
 
     fun updateCategory(category: Category) = viewModelScope.launch {

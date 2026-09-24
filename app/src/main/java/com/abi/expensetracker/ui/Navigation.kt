@@ -1,5 +1,10 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
@@ -89,6 +94,22 @@ fun LedgerBottomBar(
                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
+        }
+    }
+}
+
+/**
+ * Runs [onReselect] when the user taps the tab they are already on, [signal] being a count
+ * of such taps. The handled count is saved with the page, so a page that was disposed while
+ * off screen does not replay an old reset when it comes back.
+ */
+@Composable
+fun OnTabReselect(signal: Int, onReselect: suspend () -> Unit) {
+    var handled by rememberSaveable { mutableIntStateOf(signal) }
+    LaunchedEffect(signal) {
+        if (signal != handled) {
+            handled = signal
+            onReselect()
         }
     }
 }

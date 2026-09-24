@@ -87,6 +87,14 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     val categories: StateFlow<List<Category>> = repository.observeCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /**
+     * When set, the rows are one category's spending over a range instead of the selected
+     * period: the Trends drill-down, which reuses this whole ledger.
+     */
+    private val _category = MutableStateFlow<Pair<DateRange, Long?>?>(null)
+
+    fun showCategory(range: DateRange, categoryId: Long?) { _category.value = range to categoryId }
+
     val loans: StateFlow<List<LoanEntry>> = repository.observeLoans()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -97,7 +105,10 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val rows: StateFlow<List<TxnRow>> = combine(
-        _selection.flatMapLatest { repository.observeBetween(it.range) },
+        combine(_selection, _category) { sel, cat -> sel to cat }.flatMapLatest { (sel, cat) ->
+            if (cat != null) repository.observeCategoryDebits(cat.first, cat.second)
+            else repository.observeBetween(sel.range)
+        },
         resolver,
         repository.observeCategories(),
         repository.observeLoans(),

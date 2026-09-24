@@ -11,15 +11,17 @@ import androidx.room.PrimaryKey
  * merchants over and over, so a short keyword list categorises most of a ledger without
  * the user touching anything.
  *
- * [icon] is an emoji for the same reason bank icons are: nothing ships as an asset, and a
- * backup carries the choice as plain text.
+ * [icon] is no longer shown (ledger rows wear the account's icon); the column stays so old
+ * backups restore. [color] is the ARGB the category wears in Trends; null means a stable
+ * default from [com.abi.expensetracker.data.CategoryColors].
  */
 @Entity(tableName = "categories")
 data class Category(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val icon: String = "",
-    val keywords: String = ""
+    val keywords: String = "",
+    val color: Int? = null
 ) {
     /** Lowercased, blank entries dropped. */
     val keywordList: List<String>

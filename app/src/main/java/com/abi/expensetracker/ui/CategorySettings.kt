@@ -1,5 +1,9 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
+import com.abi.expensetracker.data.CategoryColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -25,7 +29,7 @@ import com.abi.expensetracker.ui.theme.PillShape
 @Composable
 fun CategorySettings(
     categories: List<Category>,
-    onAdd: (String, String, String) -> Unit,
+    onAdd: (name: String, keywords: String, color: Int?) -> Unit,
     onUpdate: (Category) -> Unit,
     onDelete: (Long) -> Unit,
     onApplyKeywords: () -> Unit,
@@ -74,8 +78,8 @@ fun CategorySettings(
         CategoryEditorDialog(
             category = null,
             onDismiss = { onAddingChange(false) },
-            onSave = { name, icon, keywords ->
-                onAdd(name, icon, keywords)
+            onSave = { name, keywords, color ->
+                onAdd(name, keywords, color)
                 onAddingChange(false)
             },
             onDelete = null
@@ -86,8 +90,8 @@ fun CategorySettings(
         CategoryEditorDialog(
             category = category,
             onDismiss = { editing = null },
-            onSave = { name, icon, keywords ->
-                onUpdate(category.copy(name = name, icon = icon, keywords = keywords))
+            onSave = { name, keywords, color ->
+                onUpdate(category.copy(name = name, icon = "", keywords = keywords, color = color))
                 editing = null
             },
             onDelete = {
@@ -106,6 +110,7 @@ private fun CategoryRow(category: Category, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Box(Modifier.size(14.dp).background(Color(CategoryColors.of(category)), CircleShape))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(category.name, style = MaterialTheme.typography.titleSmall)
                 Text(
@@ -131,14 +136,16 @@ private fun CategoryRow(category: Category, onClick: () -> Unit) {
 }
 
 /** Add and edit are the same form; only the delete button and the title differ. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CategoryEditorDialog(
     category: Category?,
     onDismiss: () -> Unit,
-    onSave: (String, String, String) -> Unit,
+    onSave: (name: String, keywords: String, color: Int?) -> Unit,
     onDelete: (() -> Unit)?
 ) {
     var name by remember { mutableStateOf(category?.name.orEmpty()) }
+    var color by remember { mutableStateOf(category?.let { CategoryColors.of(it) } ?: CategoryColors.PALETTE.first()) }
     var keywords by remember { mutableStateOf(category?.keywords.orEmpty()) }
 
     AlertDialog(
@@ -161,6 +168,23 @@ private fun CategoryEditorDialog(
                     shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth()
                 )
+                // The colour it wears in Trends' breakdown and daily bars.
+                Text("Colour", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CategoryColors.PALETTE.forEach { option ->
+                        Box(
+                            Modifier
+                                .size(32.dp)
+                                .background(Color(option), CircleShape)
+                                .border(
+                                    if (option == color) 3.dp else 0.dp,
+                                    if (option == color) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                    CircleShape
+                                )
+                                .clickable { color = option }
+                        )
+                    }
+                }
                 OutlinedTextField(
                     value = keywords,
                     onValueChange = { keywords = it },
@@ -186,7 +210,7 @@ private fun CategoryEditorDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(name.trim(), "", keywords.trim()) },
+                onClick = { onSave(name.trim(), keywords.trim(), color) },
                 enabled = name.isNotBlank()
             ) { Text("Save") }
         },
