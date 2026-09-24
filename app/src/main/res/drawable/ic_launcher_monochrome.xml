@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon layer (Android 13+): the receipt alone; the system tints it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#000000"
+        android:fillType="evenOdd"
+        android:pathData="M37,29 H71 A4,4 0 0 1 75,33 V79 L69.5,75 64,79 58.5,75 53,79 47.5,75 42,79 36.5,75 33,79 V33 A4,4 0 0 1 37,29 Z M40,39 V43.5 H68 V39 Z M40,49 V53.5 H62 V49 Z M52,61 V67 H68 V61 Z" />
+</vector>

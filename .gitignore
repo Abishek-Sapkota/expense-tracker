@@ -7,3 +7,21 @@ build/
 captures/
 .externalNativeBuild/
 .cxx/
+
+# Kotlin compiler caches
+.kotlin/
+
+# Built app packages: build output, not source
+*.apk
+*.aab
+
+# Signing material: never commit release keys or their passwords
+*.jks
+*.keystore
+keystore.properties
+
+# Generated knowledge-graph cache (graphify); rebuilt on demand
+graphify-out/
+
+# Local logs
+*.log

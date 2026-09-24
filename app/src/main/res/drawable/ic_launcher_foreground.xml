@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher foreground: a receipt with ledger lines, inside the 66dp adaptive safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Receipt body with a torn, zig-zag bottom edge. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M37,29 H71 A4,4 0 0 1 75,33 V79 L69.5,75 64,79 58.5,75 53,79 47.5,75 42,79 36.5,75 33,79 V33 A4,4 0 0 1 37,29 Z" />
+    <!-- Ledger lines, cut in the background colour. -->
+    <path
+        android:fillColor="#A8431D"
+        android:pathData="M40,39 H68 V43.5 H40 Z M40,49 H62 V53.5 H40 Z" />
+    <!-- The amount line: shorter, bolder, right-aligned like a total. -->
+    <path
+        android:fillColor="#A8431D"
+        android:pathData="M52,61 H68 V67 H52 Z" />
+</vector>
