@@ -49,8 +49,8 @@ convention listed here, update the matching line in the same change.
 - `data/` misc — `Money` (paise Long, `रु` lakh formatting), `Period`/`CalendarDates`/
   `NepaliCalendar`, `Splits` (equal-share math, split summaries from loan entries),
   `AppIconRef` (`app:<pkg>` icons, `appLabel()` resolves notification package → app name),
-  `CategoryColors` (12-colour palette; `Category.color` or a stable default by id;
-  Uncategorised is grey), `Categorizer` (keyword auto-category), `DuplicateMatcher` (SMS vs
+  `CategoryColors` (24-colour palette; `Category.color` or a stable default by id;
+  `nextFree` for new ones; Uncategorised is grey), `Categorizer` (keyword auto-category), `DuplicateMatcher` (SMS vs
   email/notification copy of same txn: same amount+direction, ±60 min, different sender,
   one copy per sender, remark lead token must agree; user-edited rows are never merged
   by reparse). One SMS can also arrive as a `com.google.android.apps.messaging`
@@ -80,7 +80,8 @@ convention listed here, update the matching line in the same change.
   day's spend, one grouped card per day; display only), row icon = account icon (categories
   have no icons; `Category.icon` column is unused), tap = edit, long-press = multi-select
   (selection top bar with Delete + confirm), period chips, hero card,
-  `ExpenseDialog` (shared add/edit dialog: amount, remark, direction, category dropdown,
+  `ExpenseDialog` (shared add/edit dialog: amount, remark, direction, category dropdown with
+  "Create …" for a typed name (`HomeViewModel.createCategory`: name as keyword, free colour),
   every source message (primary + cross-channel copies) with channel + sender, date;
   `extras` slot → `TxnLinkControls`: Split bill / Share of split / Mark as loan).
 - `ui/OnboardingScreen.kt` (+ `OnboardingViewModel`) — first-run guide shown by
@@ -102,7 +103,7 @@ convention listed here, update the matching line in the same change.
   `CategorySettings.kt` (category editor: name, colour, keywords).
 - `ui/components/` — `Ledger.kt` (LedgerCard, PeriodHeroCard, GroupedRow, SectionHeader,
   Monogram, banners), `SearchableDropdown` (generic filterable dropdown; nullable item
-  for "none" row), `AppIcon`, `Permissions`.
+  for "none" row; optional `onCreate` row), `AppIcon`, `Permissions`.
 - `ui/AccountsScreen.kt` + VM — banks; each bank box has "Notifications from" app chips
   (+ App → `AppChooserDialog`, seen apps first; adding sets bank icon if none). Sender
   list/search is SMS senders only (package senders filtered out).

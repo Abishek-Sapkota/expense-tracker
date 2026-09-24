@@ -116,6 +116,7 @@ fun CategorySettings(
     if (adding) {
         CategoryEditorDialog(
             category = null,
+            existing = categories,
             onDismiss = { onAddingChange(false) },
             onSave = { name, keywords, color ->
                 onAdd(name, keywords, color)
@@ -179,12 +180,13 @@ private fun CategoryRow(category: Category, onClick: () -> Unit) {
 @Composable
 private fun CategoryEditorDialog(
     category: Category?,
+    existing: List<Category> = emptyList(),
     onDismiss: () -> Unit,
     onSave: (name: String, keywords: String, color: Int?) -> Unit,
     onDelete: (() -> Unit)?
 ) {
     var name by remember { mutableStateOf(category?.name.orEmpty()) }
-    var color by remember { mutableStateOf(category?.let { CategoryColors.of(it) } ?: CategoryColors.PALETTE.first()) }
+    var color by remember { mutableStateOf(category?.let { CategoryColors.of(it) } ?: CategoryColors.nextFree(existing)) }
     var keywords by remember { mutableStateOf(category?.keywords.orEmpty()) }
 
     AlertDialog(

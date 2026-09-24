@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui.components
 
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -44,7 +45,9 @@ fun <T> SearchableDropdown(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     placeholder: String = "Search",
-    emptyText: String = "No match"
+    emptyText: String = "No match",
+    /** When set, typing a name no item has offers a "Create" row that calls this. */
+    onCreate: ((String) -> Unit)? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -88,7 +91,20 @@ fun <T> SearchableDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            if (matches.isEmpty()) {
+            val typed = query.trim()
+            if (onCreate != null && typed.isNotEmpty() &&
+                items.none { itemLabel(it).equals(typed, ignoreCase = true) }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Create \u201c$typed\u201d", color = MaterialTheme.colorScheme.primary) },
+                    leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                    onClick = {
+                        onCreate(typed)
+                        expanded = false
+                    }
+                )
+            }
+            if (matches.isEmpty() && onCreate == null) {
                 Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Text(
                         emptyText,

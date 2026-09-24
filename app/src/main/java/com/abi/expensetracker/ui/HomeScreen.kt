@@ -432,6 +432,7 @@ fun HomeScreen(
             categories = categories,
             initialCategoryId = txn.categoryId,
             onCategoryChange = { categoryPicked = true; vm.setCategory(txn, it) },
+            onCreateCategory = { name, done -> vm.createCategory(name, done) },
             sourceMessages = sources,
             extras = {
                 TxnLinkControls(
@@ -714,6 +715,8 @@ private fun ExpenseDialog(
     categories: List<Category> = emptyList(),
     initialCategoryId: Long? = null,
     onCategoryChange: (Long?) -> Unit = {},
+    /** Creates a category from the typed name and hands back its id. */
+    onCreateCategory: ((String, (Long) -> Unit) -> Unit)? = null,
     sourceMessages: List<RawMessage> = emptyList(),
     /** Loan and split controls for an existing transaction, drawn under the category. */
     extras: (@Composable () -> Unit)? = null,
@@ -780,7 +783,7 @@ private fun ExpenseDialog(
                 // Saved on tap rather than with the rest of the form: the category is the
                 // one field a keyword guess also writes, and applying it immediately is
                 // what marks the row as hand-set so the guess never comes back over it.
-                if (categories.isNotEmpty()) {
+                if (categories.isNotEmpty() || onCreateCategory != null) {
                     var chosen by remember(initialCategoryId) {
                         mutableStateOf(initialCategoryId)
                     }
@@ -801,8 +804,18 @@ private fun ExpenseDialog(
                             chosen = category?.id
                             onCategoryChange(chosen)
                         },
-                        placeholder = "Search categories",
+                        placeholder = "Search or create a category",
                         emptyText = "No category matches that",
+                        // Creating from here saves a trip to Settings mid-edit; the new
+                        // category is picked for this transaction as soon as it exists.
+                        onCreate = onCreateCategory?.let { create ->
+                            { name ->
+                                create(name) { id ->
+                                    chosen = id
+                                    onCategoryChange(id)
+                                }
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

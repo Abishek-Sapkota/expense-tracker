@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.data.CategoryColors
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -285,6 +286,19 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             repository.recordSplitPayment(split, person, amountMinor, via)
             _status.value = "${person.trim()} paid ${Money.format(amountMinor)} for ${split.title}."
         }
+
+    /**
+     * A category made from the edit popup: its own name as its first keyword, so the next
+     * matching transaction files itself, and a colour no other category is using.
+     */
+    fun createCategory(name: String, onCreated: (Long) -> Unit) = viewModelScope.launch {
+        val id = repository.addCategory(
+            name, keywords = name.trim().lowercase(),
+            color = CategoryColors.nextFree(categories.value)
+        )
+        _status.value = "Created category ${name.trim()}."
+        onCreated(id)
+    }
 
     fun clearStatus() { _status.value = null }
 
