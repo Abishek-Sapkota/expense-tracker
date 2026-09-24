@@ -557,7 +557,7 @@ private fun TransactionTile(
                 }
             } else {
                 DirectionalMonogram(
-                    text = txn.merchant ?: txn.remark ?: "?",
+                    text = txn.merchant ?: txn.remark ?: row.categoryName ?: "?",
                     isCredit = isCredit,
                     // The account's own icon (usually its app icon), else the initial.
                     glyph = row.bankIcon
@@ -568,7 +568,8 @@ private fun TransactionTile(
                 // The remark stands in as the title when the message named no merchant:
                 // "Khaja" says more about the row than "Unknown" ever does.
                 Text(
-                    txn.merchant ?: txn.remark ?: "Unknown",
+                    // With no title at all, the category the user picked names the row.
+                    txn.merchant ?: txn.remark ?: row.categoryName ?: "Unknown",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
