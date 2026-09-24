@@ -77,13 +77,19 @@ convention listed here, update the matching line in the same change.
   `ExpenseDialog` (shared add/edit dialog: amount, remark, direction, category dropdown,
   every source message (primary + cross-channel copies) with channel + sender, date;
   `extras` slot → `TxnLinkControls`: Split bill / Share of split / Mark as loan).
+- `ui/OnboardingScreen.kt` (+ `OnboardingViewModel`) — first-run guide shown by
+  `MainActivity` while `SettingsStore.onboardingDone` is false: Welcome → Permissions →
+  Sync inbox → Accounts (embeds the real `AccountsScreen`) → Done. Auto-marked done for
+  installs that already have accounts; Settings has "Run setup guide again".
+- `ui/components/Permissions.kt` `SyncSmsControl` — Sync SMS button (asks SMS permission
+  first; inbox query without it throws), used in onboarding and Find a sender.
 - `ui/SplitDialogs.kt` — `SplitBillDialog` (equal/custom shares, include me),
   `SplitPaymentDialog` (friend pays share; bank credit = fixed amount, cash = editable).
 - `ui/DuplicatesScreen.kt` + `DuplicatesViewModel.kt` — folded copies by arrival date
   (default Today, `PeriodChips`/`DateRangeDialog` reused from HomeScreen), "Not a
   duplicate" button. Opened from Ledger top bar, drawn in place of HomeScreen.
 - `ui/TrendsScreen`, `TemplatesScreen`, `AccountsScreen`, `SettingsScreen` (+ ViewModels),
-  `CategorySettings.kt` (category editor with one-tap emoji icon row), `StartupPermissionDialog.kt`.
+  `CategorySettings.kt` (category editor with one-tap emoji icon row).
 - `ui/components/` — `Ledger.kt` (LedgerCard, PeriodHeroCard, GroupedRow, SectionHeader,
   Monogram, banners), `SearchableDropdown` (generic filterable dropdown; nullable item
   for "none" row), `AppIcon`, `Permissions`.

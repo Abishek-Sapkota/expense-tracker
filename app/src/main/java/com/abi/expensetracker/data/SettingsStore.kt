@@ -21,6 +21,7 @@ class SettingsStore(private val context: Context) {
     private val lastSyncedKey = longPreferencesKey("lastSyncedSmsDate")
     private val accentKey = stringPreferencesKey("accentColor")
     private val permissionPromptKey = booleanPreferencesKey("permissionPromptAnswered")
+    private val onboardingDoneKey = booleanPreferencesKey("onboardingDone")
     private val limitAmountKey = longPreferencesKey("spendingLimitMinor")
     private val limitBasisKey = stringPreferencesKey("spendingLimitBasis")
     private val themeModeKey = stringPreferencesKey("themeMode")
@@ -50,6 +51,13 @@ class SettingsStore(private val context: Context) {
      */
     val permissionPromptAnswered: Flow<Boolean> =
         context.dataStore.data.map { it[permissionPromptKey] ?: false }
+
+    /** Whether the first-run guide has been finished (or skipped for an existing setup). */
+    val onboardingDone: Flow<Boolean> = context.dataStore.data.map { it[onboardingDoneKey] ?: false }
+
+    suspend fun setOnboardingDone(done: Boolean) {
+        context.dataStore.edit { it[onboardingDoneKey] = done }
+    }
 
     suspend fun setPermissionPromptAnswered() {
         context.dataStore.edit { it[permissionPromptKey] = true }

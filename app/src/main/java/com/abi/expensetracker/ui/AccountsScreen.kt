@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.ui.components.SyncSmsControl
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.filled.Bolt
@@ -72,6 +73,8 @@ fun AccountsScreen(
     var appPickerFor by remember { mutableStateOf<Bank?>(null) }
     val bankApps by vm.bankApps.collectAsStateWithLifecycle()
     val notificationApps by vm.notificationApps.collectAsStateWithLifecycle()
+    val syncing by vm.syncing.collectAsStateWithLifecycle()
+    val syncStatus by vm.syncStatus.collectAsStateWithLifecycle()
     /** The same picker for the bank still being typed into the form above. */
     var pickingNewBankIcon by remember { mutableStateOf(false) }
     var addingBank by remember { mutableStateOf(false) }
@@ -180,7 +183,7 @@ fun AccountsScreen(
                     LedgerCard {
                         Text(
                             if (senders.isEmpty())
-                                "No messages read yet. Sync your messages from Settings first."
+                                "No messages read yet. Open Find a sender and tap Sync SMS."
                             else
                                 "No sender is linked yet. Find one and point it at a bank.",
                             style = MaterialTheme.typography.bodySmall,
@@ -242,6 +245,9 @@ fun AccountsScreen(
             onLink = { key, bankId -> vm.link(key, bankId) },
             onUnlink = { key -> vm.unlink(key) },
             onAsksWhatFor = { key, on -> vm.setAsksWhatFor(key, on) },
+            syncing = syncing,
+            syncStatus = syncStatus,
+            onSync = vm::syncSms,
             onDismiss = { senderSearchOpen = false; vm.setSenderQuery("") }
         )
     }
@@ -628,6 +634,9 @@ private fun SenderSearchSheet(
     onLink: (String, Long) -> Unit,
     onUnlink: (String) -> Unit,
     onAsksWhatFor: (String, Boolean) -> Unit,
+    syncing: Boolean,
+    syncStatus: String?,
+    onSync: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -652,6 +661,8 @@ private fun SenderSearchSheet(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            // Right here, so a sender that has not been read yet is one tap away.
+            SyncSmsControl(syncing = syncing, status = syncStatus, onSync = onSync)
             OutlinedTextField(
                 value = query,
                 onValueChange = onQuery,
@@ -681,8 +692,7 @@ private fun SenderSearchSheet(
                         when {
                             searching -> "No sender matches that. Try a word the message " +
                                 "itself uses, like the wallet's name."
-                            totalSenders == 0 -> "No messages read yet. Sync your messages " +
-                                "from Settings first."
+                            totalSenders == 0 -> "No messages read yet. Tap Sync SMS above."
                             else -> "Every sender is linked. Search to find one and change " +
                                 "where it points."
                         },

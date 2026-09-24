@@ -113,6 +113,8 @@ class ExpenseRepository(
             .toSet()
     }
 
+    suspend fun bankCount(): Int = withContext(Dispatchers.IO) { db.bankDao().all().size }
+
     suspend fun addBank(name: String, icon: String? = null): Long = withContext(Dispatchers.IO) {
         db.bankDao().insert(Bank(name = name.trim(), icon = icon?.takeIf { it.isNotBlank() }))
     }

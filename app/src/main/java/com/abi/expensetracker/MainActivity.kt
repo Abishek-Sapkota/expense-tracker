@@ -1,5 +1,9 @@
 package com.abi.expensetracker
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import com.abi.expensetracker.di.ServiceLocator
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -32,12 +36,10 @@ import com.abi.expensetracker.ui.HomeScreen
 import com.abi.expensetracker.ui.LedgerBottomBar
 import com.abi.expensetracker.ui.components.AddFab
 import com.abi.expensetracker.ui.AccountsScreen
-import com.abi.expensetracker.ui.StartupPermissionDialog
+import com.abi.expensetracker.ui.OnboardingScreen
 import com.abi.expensetracker.ui.LoansScreen
 import com.abi.expensetracker.ui.SettingsScreen
 import com.abi.expensetracker.ui.TrendsScreen
-import com.abi.expensetracker.ui.components.rememberNotificationAccessState
-import com.abi.expensetracker.ui.components.rememberSmsPermissionState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import com.abi.expensetracker.ui.theme.AccentColor
@@ -108,31 +110,27 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Asked on the way in, because an expense tracker with no permissions
-                // shows an empty ledger, and an empty ledger looks like a broken app.
-                val sms = rememberSmsPermissionState()
-                val notifications = rememberNotificationAccessState()
-                // Starts true so a user who already answered never sees the dialog flash
-                // while DataStore is still reading from disk.
-                val promptAnswered by settings.permissionPromptAnswered
-                    .collectAsStateWithLifecycle(initialValue = true)
-
-                LaunchedEffect(sms.granted, notifications.granted) {
-                    // Everything is on: there is nothing left to ask, on this launch or
-                    // any later one.
-                    if (sms.granted && notifications.granted) {
-                        settings.setPermissionPromptAnswered()
-                    }
+                // First run gets the setup guide instead of the ledger. Null until DataStore
+                // has answered, so neither screen flashes before the other.
+                val onboardingDone by settings.onboardingDone
+                    .collectAsStateWithLifecycle(initialValue = null)
+                LaunchedEffect(onboardingDone) {
+                    // An install that already has accounts was set up before the guide
+                    // existed; it does not need walking through it.
+                    if (onboardingDone == false &&
+                        ServiceLocator.repository(context).bankCount() > 0
+                    ) settings.setOnboardingDone(true)
                 }
-
-                if (!promptAnswered && !(sms.granted && notifications.granted)) {
-                    StartupPermissionDialog(
-                        sms = sms,
-                        notifications = notifications,
-                        onDismiss = {
-                            scope.launch { settings.setPermissionPromptAnswered() }
-                        }
-                    )
+                when (onboardingDone) {
+                    null -> {
+                        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+                        return@ExpenseTrackerTheme
+                    }
+                    false -> {
+                        OnboardingScreen(onFinish = { scope.launch { settings.setOnboardingDone(true) } })
+                        return@ExpenseTrackerTheme
+                    }
+                    true -> Unit
                 }
 
                 Scaffold(

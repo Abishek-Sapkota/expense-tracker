@@ -186,6 +186,9 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Sends the user back through the first-run guide on the next frame. */
+    fun rerunSetupGuide() = viewModelScope.launch { settings.setOnboardingDone(false) }
+
     fun clearStatus() { _status.value = null }
 
     private fun launchTask(label: String, block: suspend () -> String) {

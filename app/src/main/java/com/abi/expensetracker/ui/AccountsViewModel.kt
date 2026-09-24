@@ -178,6 +178,22 @@ class AccountsViewModel(app: Application) : AndroidViewModel(app) {
     fun unlink(senderKey: String) =
         viewModelScope.launch { repository.unlinkSender(senderKey) }
 
+    private val _syncing = MutableStateFlow(false)
+    val syncing: StateFlow<Boolean> = _syncing.asStateFlow()
+    private val _syncStatus = MutableStateFlow<String?>(null)
+    val syncStatus: StateFlow<String?> = _syncStatus.asStateFlow()
+
+    /** Reads new inbox messages so their senders can be linked; the caller checks permission. */
+    fun syncSms() = viewModelScope.launch {
+        _syncing.value = true
+        _syncStatus.value = runCatching { repository.backfillFromInbox() }
+            .fold(
+                { "Read ${it.messagesRead} new messages · ${it.totalStored} stored." },
+                { "Could not read messages: ${it.message}" }
+            )
+        _syncing.value = false
+    }
+
     fun setAsksWhatFor(senderKey: String, enabled: Boolean) =
         viewModelScope.launch { settings.setRemarkPrompt(senderKey, enabled) }
 }

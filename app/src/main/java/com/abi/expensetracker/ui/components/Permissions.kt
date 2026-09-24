@@ -1,5 +1,13 @@
 package com.abi.expensetracker.ui.components
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.Icons
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -186,6 +194,33 @@ fun PermissionCard(
             Button(onClick = state.request, shape = PillShape) {
                 Text(if (state.granted) grantedActionLabel else actionLabel)
             }
+        }
+    }
+}
+
+/**
+ * Reads the SMS inbox into the app from wherever senders are being set up, so a first-time
+ * user is not sent to Settings mid-task. Asks for SMS access first when it is missing:
+ * querying the inbox without it throws.
+ */
+@Composable
+fun SyncSmsControl(syncing: Boolean, status: String?, onSync: () -> Unit, modifier: Modifier = Modifier) {
+    val sms = rememberSmsPermissionState()
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (sms.granted) {
+                OutlinedButton(onClick = onSync, enabled = !syncing, shape = PillShape) {
+                    Icon(Icons.Filled.Sync, contentDescription = null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (syncing) "Reading messages…" else "Sync SMS")
+                }
+            } else {
+                Button(onClick = sms.request, shape = PillShape) { Text("Allow SMS access") }
+            }
+            if (syncing) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+        }
+        status?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

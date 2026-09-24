@@ -211,6 +211,9 @@ fun SettingsScreen(
                         }
                     }
                     OfflineCard()
+                    TextButton(onClick = vm::rerunSetupGuide, modifier = Modifier.fillMaxWidth()) {
+                        Text("Run setup guide again")
+                    }
                 }
 
                 SettingsSection.PERMISSIONS -> {
