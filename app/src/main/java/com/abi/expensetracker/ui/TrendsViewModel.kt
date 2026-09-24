@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.data.BankResolver
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,7 +27,6 @@ data class DailySpend(val day: Int, val amountMinor: Long)
 data class CategorySlice(
     val categoryId: Long?,
     val name: String,
-    val icon: String,
     val amountMinor: Long,
     val shareOfTotal: Float
 )
@@ -59,6 +59,29 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
     private val zone: ZoneId = ZoneId.systemDefault()
 
     private val settings = SettingsStore(app)
+
+    /** The category tapped in the breakdown, whose transactions are listed; null for none. */
+    private val _openCategory = MutableStateFlow<CategorySlice?>(null)
+    val openCategory: StateFlow<CategorySlice?> = _openCategory.asStateFlow()
+
+    fun openCategory(slice: CategorySlice?) { _openCategory.value = slice }
+
+    private val resolver = combine(
+        repository.observeBanks(), repository.observeSenderLinks(), repository.observeBankApps()
+    ) { banks, links, apps -> BankResolver(banks, links, apps) }
+
+    /** The open category's spending this month, each with the account it came through. */
+    // Lazy: it reads [window], which is declared further down.
+    val categoryRows: StateFlow<List<Pair<com.abi.expensetracker.data.db.TxnWithSender, String?>>> by lazy {
+        combine(window, _openCategory) { w, c -> w to c }
+            .flatMapLatest { (w, c) ->
+                if (c == null) kotlinx.coroutines.flow.flowOf(emptyList())
+                else combine(repository.observeCategoryDebits(w.range, c.categoryId), resolver) { rows, r ->
+                    rows.map { it to r.bankFor(it.sender, it.body)?.name }
+                }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }
 
     /**
      * The month on screen, on whichever calendar the user reads.
@@ -133,7 +156,6 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
                     CategorySlice(
                         categoryId = row.categoryId,
                         name = category?.name ?: "Uncategorised",
-                        icon = category?.icon?.takeIf { it.isNotBlank() } ?: "📋",
                         amountMinor = row.totalMinor,
                         shareOfTotal = if (total <= 0L) 0f else row.totalMinor.toFloat() / total
                     )

@@ -41,8 +41,6 @@ data class TxnRow(
     val bankName: String?,
     /** The linked bank's emoji, when it has one. Falls back to a merchant monogram. */
     val bankIcon: String?,
-    /** The category's emoji, when the row has one. Preferred over the bank's. */
-    val categoryIcon: String?,
     val categoryName: String?,
     val isManual: Boolean,
     /** Set when the row is marked as a loan, which takes it out of the totals. */
@@ -115,7 +113,6 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 txn = row.txn,
                 bankName = bank?.name,
                 bankIcon = bank?.icon,
-                categoryIcon = category?.icon?.takeIf { it.isNotBlank() },
                 categoryName = category?.name,
                 isManual = row.txn.isManual,
                 loan = loanByTxn[row.txn.id],

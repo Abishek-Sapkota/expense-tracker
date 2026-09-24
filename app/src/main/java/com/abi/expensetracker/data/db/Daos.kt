@@ -173,6 +173,20 @@ interface TxnDao {
     )
     fun observeCategoryTotals(from: Long, to: Long): Flow<List<CategoryTotal>>
 
+    /**
+     * One category's spending in [from, to), newest first; a null [categoryId] is the
+     * uncategorised bucket. Loans are left out, as in the totals this drills into.
+     */
+    @Query(
+        "SELECT t.*, r.sender AS sender, r.body AS body FROM transactions t " +
+            "LEFT JOIN raw_messages r ON r.id = t.rawId " +
+            "WHERE t.direction = 'DEBIT' AND t.occurredAt >= :from AND t.occurredAt < :to " +
+            "AND ((:categoryId IS NULL AND t.categoryId IS NULL) OR t.categoryId = :categoryId) " +
+            "AND t.id NOT IN (SELECT txnId FROM loan_entries WHERE txnId IS NOT NULL) " +
+            "ORDER BY t.occurredAt DESC"
+    )
+    fun observeCategoryDebits(from: Long, to: Long, categoryId: Long?): Flow<List<TxnWithSender>>
+
     /** Debits in [from, to) marked as a loan, which the spending totals leave out. */
     @Query(
         "SELECT COALESCE(SUM(amountMinor), 0) FROM transactions " +

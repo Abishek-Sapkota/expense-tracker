@@ -271,17 +271,28 @@ fun HomeScreen(
                     }
                 }
             } else {
-                itemsIndexed(rows, key = { _, row -> row.txn.id }) { index, row ->
+                // One grouped card per day under a date header, days separated by a gap.
+                // Display only: the data stays one list, so totals and selection are
+                // unaffected.
+                val days = rows.groupBy {
+                    Instant.ofEpochMilli(it.txn.occurredAt).atZone(ZoneId.systemDefault()).toLocalDate()
+                }
+                days.forEach { (day, dayRows) ->
+                    item(key = "day-$day") {
+                        DayHeader(day, dayRows, nepaliDates)
+                    }
+                    itemsIndexed(dayRows, key = { _, row -> row.txn.id }) { index, row ->
                     TransactionTile(
                         nepaliDates = nepaliDates,
                         row = row,
-                        position = GroupPosition.of(index, rows.size),
+                        position = GroupPosition.of(index, dayRows.size),
                         selected = row.txn.id in selectedIds,
                         // Once anything is selected a tap extends the selection; editing
                         // waits until the selection is cleared.
                         onClick = { if (selecting) toggle(row.txn.id) else editing = row.txn },
                         onLongClick = { toggle(row.txn.id) }
                     )
+                    }
                 }
             }
 
@@ -534,10 +545,8 @@ private fun TransactionTile(
                 DirectionalMonogram(
                     text = txn.merchant ?: txn.remark ?: "?",
                     isCredit = isCredit,
-                    // What the money went on, then who it went through, then the initial.
-                    // The category is the most useful of the three at a glance, and the one
-                    // that repeats across banks.
-                    glyph = row.categoryIcon ?: row.bankIcon
+                    // The account's own icon (usually its app icon), else the initial.
+                    glyph = row.bankIcon
                 )
             }
 
@@ -620,6 +629,40 @@ private fun TransactionTile(
  * part that tells one of today's three coffees from another. The year is dropped: in a
  * list already filtered to a period it is the same on every row.
  */
+/**
+ * "Today", "Yesterday" or the date, with that day's net on the right: the header that
+ * opens each day's group in the ledger.
+ */
+@Composable
+private fun DayHeader(day: LocalDate, rows: List<TxnRow>, nepaliDates: Boolean) {
+    val today = LocalDate.now()
+    val label = when (day) {
+        today -> "Today"
+        today.minusDays(1) -> "Yesterday"
+        else -> CalendarDates.dayLabel(day, nepaliDates)
+    }
+    // Loans are left out, as in every total; the rows still list them.
+    val spent = rows.filter { it.txn.direction == Direction.DEBIT && it.loan == null }.sumOf { it.txn.amountMinor }
+    Row(
+        Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 16.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label.uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        if (spent > 0) {
+            Text(
+                Money.format(spent) + " spent",
+                style = MaterialTheme.typography.labelMedium.merge(LocalTabularStyle.current),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 /** Built once: a formatter per row per recomposition was measurable garbage while scrolling. */
 private val TIME_OF_DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
 
@@ -734,7 +777,7 @@ private fun ExpenseDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     val label: (Category?) -> String = { category ->
-                        category?.let { "${it.icon} ${it.name}" } ?: "No category"
+                        category?.name ?: "No category"
                     }
                     SearchableDropdown(
                         selectedLabel = label(categories.firstOrNull { it.id == chosen }),

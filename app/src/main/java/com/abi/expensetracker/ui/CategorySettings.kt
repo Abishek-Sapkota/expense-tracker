@@ -106,7 +106,6 @@ private fun CategoryRow(category: Category, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Monogram(text = category.name, glyph = category.icon.ifBlank { null })
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(category.name, style = MaterialTheme.typography.titleSmall)
                 Text(
@@ -132,7 +131,6 @@ private fun CategoryRow(category: Category, onClick: () -> Unit) {
 }
 
 /** Add and edit are the same form; only the delete button and the title differ. */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CategoryEditorDialog(
     category: Category?,
@@ -141,7 +139,6 @@ private fun CategoryEditorDialog(
     onDelete: (() -> Unit)?
 ) {
     var name by remember { mutableStateOf(category?.name.orEmpty()) }
-    var icon by remember { mutableStateOf(category?.icon.orEmpty()) }
     var keywords by remember { mutableStateOf(category?.keywords.orEmpty()) }
 
     AlertDialog(
@@ -156,43 +153,14 @@ private fun CategoryEditorDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = icon,
-                        onValueChange = { icon = it.take(4) },
-                        label = { Text("Icon") },
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.small,
-                        modifier = Modifier.width(96.dp)
-                    )
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Name") },
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.small,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                // Tap to pick; the field above still takes any emoji the keyboard has.
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    CATEGORY_ICONS.forEach { emoji ->
-                        Box(
-                            Modifier
-                                .size(40.dp)
-                                .background(
-                                    if (emoji == icon) MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    ChipShape
-                                )
-                                .clickable { icon = emoji },
-                            contentAlignment = Alignment.Center
-                        ) { Text(emoji, style = MaterialTheme.typography.titleMedium) }
-                    }
-                }
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 OutlinedTextField(
                     value = keywords,
                     onValueChange = { keywords = it },
@@ -218,17 +186,10 @@ private fun CategoryEditorDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(name.trim(), icon.trim(), keywords.trim()) },
+                onClick = { onSave(name.trim(), "", keywords.trim()) },
                 enabled = name.isNotBlank()
             ) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
-
-/** Common spending buckets, offered as one-tap icons in the category editor. */
-private val CATEGORY_ICONS = listOf(
-    "🛒", "🍽️", "☕", "🥛", "🍞", "🍺", "🏍️", "🚗", "⛽", "🚌",
-    "⚡", "📱", "🏠", "🧰", "💊", "🏥", "🎓", "👕", "🎬", "🎁",
-    "✈️", "💇", "🐾", "💳"
-)

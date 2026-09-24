@@ -72,8 +72,10 @@ convention listed here, update the matching line in the same change.
   filter chips All/Owe you/You owe/Settled/Splits (split cards with "Paid cash") (totals tap-to-filter), person detail history,
   `LoanEntryDialog` (typed name + suggestion chips + system
   contact picker, no READ_CONTACTS). Edit popup "Mark as loan" links a txn.
-- `ui/HomeScreen.kt` + `HomeViewModel.kt` — ledger list (tap = edit, long-press = multi-select;
-  selection top bar with Delete + confirm), period chips, hero card,
+- `ui/HomeScreen.kt` + `HomeViewModel.kt` — ledger list grouped by day (`DayHeader` with the
+  day's spend, one grouped card per day; display only), row icon = account icon (categories
+  have no icons; `Category.icon` column is unused), tap = edit, long-press = multi-select
+  (selection top bar with Delete + confirm), period chips, hero card,
   `ExpenseDialog` (shared add/edit dialog: amount, remark, direction, category dropdown,
   every source message (primary + cross-channel copies) with channel + sender, date;
   `extras` slot → `TxnLinkControls`: Split bill / Share of split / Mark as loan).
@@ -88,8 +90,10 @@ convention listed here, update the matching line in the same change.
 - `ui/DuplicatesScreen.kt` + `DuplicatesViewModel.kt` — folded copies by arrival date
   (default Today, `PeriodChips`/`DateRangeDialog` reused from HomeScreen), "Not a
   duplicate" button. Opened from Ledger top bar, drawn in place of HomeScreen.
+- `ui/TrendsScreen.kt` — tapping a category row opens `CategoryTransactions` (that
+  category's month debits via `observeCategoryDebits`, loans excluded; Back returns).
 - `ui/TrendsScreen`, `TemplatesScreen`, `AccountsScreen`, `SettingsScreen` (+ ViewModels),
-  `CategorySettings.kt` (category editor with one-tap emoji icon row).
+  `CategorySettings.kt` (category editor: name + keywords).
 - `ui/components/` — `Ledger.kt` (LedgerCard, PeriodHeroCard, GroupedRow, SectionHeader,
   Monogram, banners), `SearchableDropdown` (generic filterable dropdown; nullable item
   for "none" row), `AppIcon`, `Permissions`.

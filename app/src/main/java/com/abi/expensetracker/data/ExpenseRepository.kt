@@ -67,6 +67,9 @@ class ExpenseRepository(
         observeSplitRecoveries(range)
     ) { spent, recoveries -> spent - recoveries.sumOf { it.recoveredMinor } }
 
+    fun observeCategoryDebits(range: DateRange, categoryId: Long?): Flow<List<TxnWithSender>> =
+        db.txnDao().observeCategoryDebits(range.startMillis, range.endMillis, categoryId)
+
     fun observeLoanDebitsBetween(range: DateRange): Flow<Long> =
         db.txnDao().observeLoanDebitsBetween(range.startMillis, range.endMillis)
 

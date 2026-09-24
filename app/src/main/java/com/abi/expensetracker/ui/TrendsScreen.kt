@@ -1,5 +1,12 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.ui.components.GroupPosition
+import com.abi.expensetracker.ui.components.GroupedRow
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.clickable
+import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.outlined.Info
@@ -73,6 +80,15 @@ fun TrendsScreen(vm: TrendsViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val window by vm.window.collectAsStateWithLifecycle()
     val canGoForward by vm.canGoForward.collectAsStateWithLifecycle()
+    val openCategory by vm.openCategory.collectAsStateWithLifecycle()
+    val categoryRows by vm.categoryRows.collectAsStateWithLifecycle()
+
+    // A tapped category takes over the tab with its own transactions; Back returns.
+    openCategory?.let { slice ->
+        BackHandler { vm.openCategory(null) }
+        CategoryTransactions(slice, window.label, categoryRows, onBack = { vm.openCategory(null) })
+        return
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -129,10 +145,10 @@ fun TrendsScreen(vm: TrendsViewModel = viewModel()) {
             item {
                 SectionHeader(
                     title = "By category",
-                    trailing = "${state.categories.size} categories"
+                    trailing = "Tap to see transactions"
                 )
             }
-            item { CategoryCard(state.categories) }
+            item { CategoryCard(state.categories, onOpen = vm::openCategory) }
             item {
                 Row(Modifier.padding(horizontal = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(
@@ -379,22 +395,17 @@ private fun SpendBars(daily: List<DailySpend>, busiestDay: Int?, modifier: Modif
 
 /** Every category in one grouped card: icon, name, share, amount and a share bar. */
 @Composable
-private fun CategoryCard(slices: List<CategorySlice>) {
+private fun CategoryCard(slices: List<CategorySlice>, onOpen: (CategorySlice) -> Unit) {
     LedgerCard {
         slices.forEachIndexed { index, slice ->
             Column(
-                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                Modifier.clickable { onOpen(slice) }.padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainer) {
-                        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                            Text(slice.icon, style = MaterialTheme.typography.titleMedium)
-                        }
-                    }
                     Column(Modifier.weight(1f)) {
                         Text(slice.name, style = MaterialTheme.typography.bodyLarge)
                         Text(
@@ -406,6 +417,10 @@ private fun CategoryCard(slices: List<CategorySlice>) {
                     Text(
                         Money.format(slice.amountMinor),
                         style = MaterialTheme.typography.titleMedium.merge(LocalTabularStyle.current)
+                    )
+                    Icon(
+                        Icons.Filled.ChevronRight, contentDescription = "Show transactions",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 LinearProgressIndicator(
@@ -419,6 +434,94 @@ private fun CategoryCard(slices: List<CategorySlice>) {
             }
             if (index < slices.lastIndex) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
+        }
+    }
+}
+
+/**
+ * One category's spending for the month on screen: the drill-down from the breakdown.
+ * Split repayments are not netted per row here; the breakdown total already accounts for
+ * them.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CategoryTransactions(
+    slice: CategorySlice,
+    monthLabel: String,
+    rows: List<Pair<com.abi.expensetracker.data.db.TxnWithSender, String?>>,
+    onBack: () -> Unit
+) {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(
+                expandedHeight = 52.dp,
+                title = { Text(slice.name, style = MaterialTheme.typography.headlineSmall) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to trends")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.padding(padding).fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp)
+        ) {
+            item {
+                SectionHeader(
+                    title = monthLabel,
+                    trailing = Money.format(slice.amountMinor),
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+            }
+            if (rows.isEmpty()) {
+                item {
+                    LedgerCard {
+                        Text(
+                            "No transactions in this category this month.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            }
+            itemsIndexed(rows, key = { _, r -> r.first.txn.id }) { index, (row, account) ->
+                val txn = row.txn
+                GroupedRow(position = GroupPosition.of(index, rows.size), onClick = {}) {
+                    Row(
+                        Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                txn.merchant ?: txn.remark ?: "Unknown",
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1
+                            )
+                            Text(
+                                listOfNotNull(
+                                    account ?: if (txn.isManual) "Added by you" else null,
+                                    java.time.Instant.ofEpochMilli(txn.occurredAt)
+                                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                                        .let { CalendarDates.dayLabel(it, false) }
+                                ).joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            Money.formatSigned(txn.amountMinor, isCredit = false),
+                            style = MaterialTheme.typography.titleSmall.merge(LocalTabularStyle.current),
+                            color = AppTheme.finance.debit
+                        )
+                    }
+                }
             }
         }
     }
