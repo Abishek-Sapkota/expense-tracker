@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -18,10 +20,31 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Release signing comes from keystore.properties (gitignored) when it exists:
+    //   storeFile=/path/to/release.jks  storePassword=…  keyAlias=…  keyPassword=…
+    // Without it the release build is signed with the debug key, so it installs over the
+    // debug build on a test phone without an uninstall (which would wipe the database).
+    val keystoreFile = rootProject.file("keystore.properties")
+    signingConfigs {
+        if (keystoreFile.exists()) {
+            create("release") {
+                val props = Properties().apply { keystoreFile.inputStream().use { load(it) } }
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 shrinking and optimisation: Compose is several times faster in a
+            // minified, non-debuggable build, and unused icons and code are dropped.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 
@@ -70,6 +93,11 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     implementation(libs.androidx.datastore.preferences)
+
+    // Installs the ahead-of-time baseline profiles that Compose and the other AndroidX
+    // libraries ship, even for a sideloaded APK, so first launch and scrolling are not
+    // running interpreted code.
+    implementation(libs.androidx.profileinstaller)
 
     testImplementation(libs.junit)
 }

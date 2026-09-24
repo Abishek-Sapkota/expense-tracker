@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.BorderStroke
@@ -444,20 +444,20 @@ fun GroupedRow(
             .fillMaxWidth()
             .clip(shape)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .drawWithContent {
-                drawContent()
+            .drawWithCache {
                 // One 1px outline around the whole group: each row draws its share of
                 // it, with the edges it shares with a neighbour pushed out of its clip.
+                // Built once per size rather than on every frame of a scroll.
                 val stroke = 1.dp.toPx()
                 val extra = stroke * 4
                 val top = if (hasTop) 0f else -extra
                 val bottom = if (hasBottom) size.height else size.height + extra
-                clipRect {
-                    translate(top = top) {
-                        val outline = shape.createOutline(
-                            Size(size.width, bottom - top), layoutDirection, this
-                        )
-                        drawOutline(outline, hairline, style = Stroke(stroke * 2))
+                val outline = shape.createOutline(Size(size.width, bottom - top), layoutDirection, this)
+                val style = Stroke(stroke * 2)
+                onDrawWithContent {
+                    drawContent()
+                    clipRect {
+                        translate(top = top) { drawOutline(outline, hairline, style = style) }
                     }
                 }
             },

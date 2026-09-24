@@ -14,7 +14,12 @@ convention listed here, update the matching line in the same change.
 - `./gradlew compileDebugKotlin` — fastest compile check.
 - `./gradlew test` — JVM unit tests (parser, data), no device.
 - `./gradlew installDebug` — build + install to the adb-connected device.
-- Debug and release are signed differently; switching needs an uninstall (wipes DB).
+- `./gradlew assembleRelease` — R8-minified release (≈2 MB), much smoother than debug;
+  install with `adb install -r app/build/outputs/apk/release/app-release.apk`. Signed from
+  a gitignored `keystore.properties` if present, else with the debug key (so it replaces
+  the debug build without an uninstall). `profileinstaller` applies library baseline
+  profiles. Judge performance on release builds only.
+- `design/` is gitignored (local only, not on GitHub).
 
 ## Source map (`app/src/main/java/com/abi/expensetracker/`)
 

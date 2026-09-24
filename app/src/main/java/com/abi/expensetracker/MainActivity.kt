@@ -87,13 +87,25 @@ class MainActivity : ComponentActivity() {
                 var addOpen by remember { mutableStateOf(false) }
 
                 fun go(destination: Destination) {
-                    scope.launch { pagerState.animateScrollToPage(tabs.indexOf(destination)) }
+                    val target = tabs.indexOf(destination)
+                    scope.launch {
+                        // Animating across several tabs composes every page in between;
+                        // a jump of more than one tab switches instantly instead.
+                        if (kotlin.math.abs(target - pagerState.currentPage) > 1) {
+                            pagerState.scrollToPage(target)
+                        } else {
+                            pagerState.animateScrollToPage(target)
+                        }
+                    }
                 }
 
                 // Back returns to the ledger rather than leaving the app, which is what
                 // the first tab being "home" implies.
                 BackHandler(enabled = pagerState.currentPage != 0) {
-                    scope.launch { pagerState.animateScrollToPage(0) }
+                    scope.launch {
+                        if (pagerState.currentPage > 1) pagerState.scrollToPage(0)
+                        else pagerState.animateScrollToPage(0)
+                    }
                 }
 
                 // Asked on the way in, because an expense tracker with no permissions
@@ -142,6 +154,9 @@ class MainActivity : ComponentActivity() {
                     // bar cannot disagree with what is on screen — both read currentPage.
                     HorizontalPager(
                         state = pagerState,
+                        // The neighbours are composed ahead, so a swipe slides in a page
+                        // that is already built instead of building it mid-gesture.
+                        beyondViewportPageCount = 1,
                         // Consumed so the tabs' own scaffolds do not pad for the navigation
                         // bar again beneath the bottom bar that already covers it.
                         modifier = Modifier.padding(barPadding).consumeWindowInsets(barPadding),

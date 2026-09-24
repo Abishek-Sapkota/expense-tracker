@@ -92,7 +92,7 @@ fun HomeScreen(
     // Ids, not rows, so a row that refreshes underneath stays selected. Only the ids still
     // on screen count, so switching period cannot delete rows the user can no longer see.
     var selectedIds by remember { mutableStateOf(emptySet<String>()) }
-    val selectedTxns = rows.map { it.txn }.filter { it.id in selectedIds }
+    val selectedTxns = remember(rows, selectedIds) { rows.map { it.txn }.filter { it.id in selectedIds } }
     val selecting = selectedTxns.isNotEmpty()
     var confirmDelete by remember { mutableStateOf(false) }
     fun toggle(id: String) {
@@ -620,6 +620,9 @@ private fun TransactionTile(
  * part that tells one of today's three coffees from another. The year is dropped: in a
  * list already filtered to a period it is the same on every row.
  */
+/** Built once: a formatter per row per recomposition was measurable garbage while scrolling. */
+private val TIME_OF_DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+
 internal fun relativeWhen(
     millis: Long,
     zone: ZoneId = ZoneId.systemDefault(),
@@ -635,7 +638,7 @@ internal fun relativeWhen(
         today.minusDays(1) -> "Yesterday"
         else -> CalendarDates.dayLabel(date, nepali)
     }
-    val time = moment.format(DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()))
+    val time = moment.format(TIME_OF_DAY)
     return "$day, $time"
 }
 
