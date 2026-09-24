@@ -87,6 +87,18 @@ object DefaultRules {
             direction = Direction.DEBIT,
             priority = 930,
             builtIn = true
+        ),
+        // Payments and top-ups that only report success, with or without a currency:
+        // NMB's "Your NTC mobile topup for 98… of 20.00 is successful" and "Payment of NPR
+        // 395.00 to APP BOX PVT LTD on … was successful". The amount has to follow "of" and
+        // the sentence has to end in success, which keeps a price or a due notice out.
+        Rule(
+            name = "Payment or top-up successful",
+            senderPattern = ANY_SENDER,
+            bodyPattern = """(?i)\b(?:payment|top\s?-?up|recharge|transfer)\b[^.]{0,60}?\bof\s+(?:$CUR\s*)?(?<amount>[\d,]+(?:\.\d{1,2})?)\b[^.]{0,120}?\b(?:is|was|has\s+been)\s+successful""",
+            direction = Direction.DEBIT,
+            priority = 935,
+            builtIn = true
         )
     )
 }

@@ -107,8 +107,9 @@ convention listed here, update the matching line in the same change.
   (+ App → `AppChooserDialog`, seen apps first; adding sets bank icon if none). Sender
   list/search is SMS senders only (package senders filtered out).
 - `ui/TemplatesScreen.kt` — "Messages no rule could read" starters card
-  (`observeUnparsedFromLinked`: unparsed, non-copy, non-deleted messages from linked
-  senders/apps that pass `NotificationIngest.looksFinancial`); tapping one fills sample,
+  (`observeUnparsedFromLinked`: unparsed, non-copy, non-deleted money messages that pass
+  `NotificationIngest.looksLikeTransaction` (also bare amounts + success words), filter chips
+  Your accounts / All, always shown); tapping one fills sample,
   rule, sender scope and direction. While the rule field is focused, one scrollable line of
   small token pills shows the tokens not yet used ({any} always); tap inserts at cursor.
 - `ui/theme/` — Utilitarian Ledger structure (`design/utilitarian_ledger/DESIGN.md`): white

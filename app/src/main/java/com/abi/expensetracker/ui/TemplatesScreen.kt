@@ -32,6 +32,7 @@ import com.abi.expensetracker.data.model.Direction
 import com.abi.expensetracker.data.model.Rule
 import com.abi.expensetracker.parser.TemplateCompiler
 import com.abi.expensetracker.ui.components.LedgerCard
+import com.abi.expensetracker.ui.components.LedgerChip
 import com.abi.expensetracker.ui.components.SearchableDropdown
 import com.abi.expensetracker.ui.components.SectionHeader
 import com.abi.expensetracker.ui.components.StatusChip
@@ -90,7 +91,7 @@ fun TemplatesScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (starters.isNotEmpty()) {
+            run {
                 item {
                     StartersCard(
                         starters = starters,
@@ -582,12 +583,17 @@ private val CREDIT_WORDS = Regex("""(?i)\b(credited|deposited|received|refunded)
  */
 @Composable
 private fun StartersCard(
-    starters: List<Pair<com.abi.expensetracker.data.model.RawMessage, String>>,
+    starters: List<Pair<com.abi.expensetracker.data.model.RawMessage, String?>>,
     nepaliDates: Boolean,
     onPick: (com.abi.expensetracker.data.model.RawMessage) -> Unit
 ) {
     var showAll by remember { mutableStateOf(false) }
-    val shown = if (showAll) starters else starters.take(3)
+    // Linked accounts first by default: those are the templates worth writing. "All" also
+    // shows money messages from senders not linked yet.
+    var linkedOnly by remember { mutableStateOf(true) }
+    val linkedCount = starters.count { it.second != null }
+    val filtered = if (linkedOnly) starters.filter { it.second != null } else starters
+    val shown = if (showAll) filtered else filtered.take(5)
     LedgerCard {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -596,13 +602,27 @@ private fun StartersCard(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
-                StatusChip("${starters.size}")
+                StatusChip("${filtered.size}")
             }
             Text(
-                "From your linked accounts. Tap one to start a template from it.",
+                "Money messages that no rule turned into a transaction. Tap one to start a " +
+                    "template from it.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LedgerChip("Your accounts · $linkedCount", selected = linkedOnly, onClick = { linkedOnly = true; showAll = false })
+                LedgerChip("All · ${starters.size}", selected = !linkedOnly, onClick = { linkedOnly = false; showAll = false })
+            }
+            if (filtered.isEmpty()) {
+                Text(
+                    if (linkedOnly && starters.isNotEmpty())
+                        "Every message from your linked accounts was read. Check All for senders not linked yet."
+                    else "Nothing unread. Every money message has been turned into a transaction.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             shown.forEach { (message, account) ->
                 Surface(
                     onClick = { onPick(message) },
@@ -612,7 +632,7 @@ private fun StartersCard(
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            account + " · " + relativeWhen(message.sentAt, nepali = nepaliDates),
+                            (account ?: message.sender) + " · " + relativeWhen(message.sentAt, nepali = nepaliDates),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -625,9 +645,9 @@ private fun StartersCard(
                     }
                 }
             }
-            if (starters.size > 3) {
+            if (filtered.size > 5) {
                 TextButton(onClick = { showAll = !showAll }) {
-                    Text(if (showAll) "Show fewer" else "Show all ${starters.size}")
+                    Text(if (showAll) "Show fewer" else "Show all ${filtered.size}")
                 }
             }
         }

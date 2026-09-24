@@ -176,6 +176,30 @@ class SmsParserTest {
         val out = parse("Your A/C 0#1100000730 statement for 23/09/2026 is ready.")
         assertFalse(out is ParseOutcome.Parsed)
     }
+
+    @Test
+    fun `reads a top-up that only reports success, with no currency`() {
+        val txn = (parse(
+            "Your NTC mobile topup for 9866550884 of 20.00 is successful on 24-Sep-2026 21:27:37 ."
+        ) as ParseOutcome.Parsed).txn
+        assertEquals(20_00L, txn.amountMinor)
+        assertEquals(com.abi.expensetracker.data.model.Direction.DEBIT, txn.direction)
+    }
+
+    @Test
+    fun `reads a successful payment with a merchant`() {
+        val txn = (parse(
+            "Payment of NPR 395.00 to APP BOX PVT LTD on 21-May-2025 20:33:44 was successful, " +
+                "if you have not done this transaction contact NMB support immediately."
+        ) as ParseOutcome.Parsed).txn
+        assertEquals(395_00L, txn.amountMinor)
+        assertEquals("APP BOX PVT LTD", txn.merchant)
+    }
+
+    @Test
+    fun `a failed payment is not a transaction`() {
+        assertEquals(ParseOutcome.NoMatch, parse("Your payment of NPR 100.00 for 9840760280 failed. Please try again."))
+    }
 }
 
 class MoneyTest {

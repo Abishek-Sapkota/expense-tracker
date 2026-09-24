@@ -49,7 +49,7 @@ class TemplatesViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Unparsed money messages from linked senders, offered as template starters. */
-    val starters: StateFlow<List<Pair<RawMessage, String>>> = repository.observeUnparsedFromLinked()
+    val starters: StateFlow<List<Pair<RawMessage, String?>>> = repository.observeUnparsedFromLinked()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _template = MutableStateFlow("")

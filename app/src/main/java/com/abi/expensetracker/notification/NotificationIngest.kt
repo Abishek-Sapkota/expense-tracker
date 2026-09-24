@@ -31,6 +31,23 @@ object NotificationIngest {
      */
     private val ONE_TIME_CODE = Regex("""(?i)\b(otp|one[- ]time (?:password|code)|verification code)\b""")
 
+    /** An amount with paise and no currency, as bank SMS often writes it: "of 20.00". */
+    private val BARE_AMOUNT = Regex("""(?<![\d.,#])\d[\d,]*\.\d{2}\b""")
+
+    /** Wider than [MONEY_VERB]: the words a bank uses when it only reports success. */
+    private val SUCCESS_WORD = Regex("""(?i)\b(successful|successfully|top\s?-?up|recharge)\b""")
+
+    /**
+     * Looser than [looksFinancial], for stored messages rather than incoming notifications:
+     * also accepts a bare amount with paise and a success word. Used to offer unread bank
+     * SMS as template starters, where missing one costs more than listing an extra one.
+     */
+    fun looksLikeTransaction(body: String): Boolean =
+        looksFinancial(body) ||
+            (BARE_AMOUNT.containsMatchIn(body) &&
+                (MONEY_VERB.containsMatchIn(body) || SUCCESS_WORD.containsMatchIn(body)) &&
+                !ONE_TIME_CODE.containsMatchIn(body))
+
     fun looksFinancial(body: String): Boolean =
         AMOUNT.containsMatchIn(body) &&
             MONEY_VERB.containsMatchIn(body) &&

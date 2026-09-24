@@ -292,20 +292,23 @@ class ExpenseRepository(
     }
 
     /**
-     * Messages from linked senders that read like a transaction but that no rule parsed,
-     * newest first, each with the account it belongs to: the starters for a new template.
+     * Messages that read like a transaction but that no rule parsed, newest first, each
+     * with the account it belongs to (null when its sender is not linked): the starters for
+     * a new template.
      */
-    fun observeUnparsedFromLinked(): Flow<List<Pair<RawMessage, String>>> = combine(
-        db.rawMessageDao().observeUnparsed(400),
+    fun observeUnparsedFromLinked(): Flow<List<Pair<RawMessage, String?>>> = combine(
+        // No small cap: the newest unread messages are mostly OTPs and promos, and a
+        // cap of a few hundred pushed every real bank message out of the list.
+        db.rawMessageDao().observeUnparsed(5_000),
         db.bankDao().observeAll(),
         db.senderLinkDao().observeAll(),
         db.bankAppDao().observeAll()
     ) { messages, banks, links, apps ->
         val resolver = BankResolver(banks, links, apps)
+        // Every unparsed money message, with its account when the sender is linked.
         messages.mapNotNull { m ->
-            val bank = resolver.bankFor(m.sender, m.body) ?: return@mapNotNull null
-            if (!NotificationIngest.looksFinancial(m.body)) return@mapNotNull null
-            m to bank.name
+            if (!NotificationIngest.looksLikeTransaction(m.body)) return@mapNotNull null
+            m to resolver.bankFor(m.sender, m.body)?.name
         }
     }
 
