@@ -252,8 +252,9 @@ fun SettingsScreen(
                     PermissionCard(
                         title = "Ask what a payment was for",
                         body = "Right after a payment, a notification asks what it was on. " +
-                            "Reply in the shade and the ledger names the row. Choose which " +
-                            "senders should ask under Linked senders on the Accounts tab.",
+                            "Reply in the shade and the ledger names the row. It asks for any " +
+                            "payment no category matches, and for senders you pick under " +
+                            "Linked senders on the Accounts tab.",
                         state = postNotifications,
                         actionLabel = "Allow notifications"
                     )

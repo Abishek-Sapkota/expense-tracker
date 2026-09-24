@@ -1,5 +1,7 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.ui.theme.AppTheme
+import com.abi.expensetracker.ui.components.rememberPostNotificationsState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Color
@@ -67,6 +69,23 @@ fun CategorySettings(
                     )
                 }
                 Switch(checked = askUncategorised, onCheckedChange = onAskUncategorised)
+            }
+            // The question is a notification, so without that permission it would never
+            // show; say so where the switch is instead of failing silently.
+            val post = rememberPostNotificationsState()
+            if (askUncategorised && !post.granted) {
+                Row(
+                    Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Notifications are off for this app, so nothing will be asked.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppTheme.finance.debit,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = post.request) { Text("Allow notifications") }
+                }
             }
         }
 
