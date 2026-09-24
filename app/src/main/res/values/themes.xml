@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.ExpenseTracker" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Matches the Compose light background, so the cold-start window does not
+             flash the platform grey before the first frame draws. -->
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>

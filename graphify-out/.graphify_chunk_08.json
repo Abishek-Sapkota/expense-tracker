@@ -1,0 +1,709 @@
+{
+  "nodes": [
+    {
+      "id": "design_parser_templates_screen_sms_parser_template_editor",
+      "label": "SMS Parser Template Editor Screen",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Mobile design mock for the 'Ledger' expense tracker: a single scrolling screen that lets a user turn a real bank transaction SMS into a reusable parsing template. Authoring, live verification, saved-template management and built-in fallbacks are stacked on one screen so the user never leaves the context of the sample message they pasted."
+    },
+    {
+      "id": "design_parser_templates_screen_sample_message_capture",
+      "label": "Sample Bank Message Capture",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Read-only quoted card holding a real SMS ('Rs.450.00 debited from a/c XX1234 to SWIGGY on 20-09-2026. Ref 123456789. Avl bal Rs.14,200.') with a 'Copy to template' action. Starting from a concrete message rather than a blank regex box means the user edits an example instead of authoring a pattern from nothing."
+    },
+    {
+      "id": "design_parser_templates_screen_bracketed_token_syntax",
+      "label": "Bracketed Token Syntax",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Tokens like {amount}, {acct}, {merchant} and {ref} are inserted inline into the sample text to mark the values to extract. Each token is rendered as a distinctly tinted chip so the placeholders are visually separable from literal text. This is a deliberate substitute for exposing raw regex to end users."
+    },
+    {
+      "id": "design_parser_templates_screen_pattern_match_rule",
+      "label": "Pattern Match Rule",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "The editable rule row: literal fragments ('Rs.', 'debited from a/c XX', 'to', '. Ref') interleaved with value tokens. It is the authored artifact that a saved template stores."
+    },
+    {
+      "id": "design_parser_templates_screen_regex_synced_indicator",
+      "label": "Regex Synced Indicator",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Small 'Regex synced' badge on the pattern rule header, signalling that the friendly token pattern has been compiled to an underlying regular expression. It keeps the regex as an implementation detail while still reassuring power users that a real matcher backs the tokens."
+    },
+    {
+      "id": "design_parser_templates_screen_live_match_preview",
+      "label": "Live Match Preview",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Green 'Matched correctly' panel that runs the in-progress rule against the sample message and shows the resulting field values immediately, before the template is saved. Verification happens at authoring time rather than after a bad template has already mis-parsed real messages."
+    },
+    {
+      "id": "design_parser_templates_screen_match_confidence_score",
+      "label": "Match Confidence Score",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "'100% confidence' pill on the match preview. Expresses parse quality as a graded score rather than a binary pass/fail, which lets partially-matching templates still be saved and later triaged."
+    },
+    {
+      "id": "design_parser_templates_screen_extracted_field_set",
+      "label": "Extracted Field Set (Amount, Merchant, Account, Ref No.)",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "The four-cell result grid of the parse: Amount (Rs.450.00, rendered in the accent colour as the primary value), Merchant (SWIGGY), Account and Ref No. This is the canonical transaction shape the parser emits into the ledger."
+    },
+    {
+      "id": "design_parser_templates_screen_masked_account_display",
+      "label": "Masked Account Display",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "The account field renders as '••1234' rather than the raw 'XX1234' fragment from the SMS: account identifiers are normalised and truncated to the last four digits for display, limiting on-screen exposure of account numbers."
+    },
+    {
+      "id": "design_parser_templates_screen_transaction_nature_toggle",
+      "label": "Transaction Nature Toggle",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Two-state segmented control, 'Debit (Expense)' vs 'Credit (Income)', selected per template. The sign of a transaction is declared by the template author instead of being inferred from message wording, which removes a whole class of direction-detection errors."
+    },
+    {
+      "id": "design_parser_templates_screen_sender_header_scope",
+      "label": "SMS Sender Header Scope",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Dropdown binding a template to a sender header such as 'HDFCBK'. Scoping by sender narrows the candidate set before pattern matching, so near-identical formats from different banks cannot cross-match."
+    },
+    {
+      "id": "design_parser_templates_screen_template_library",
+      "label": "Saved Template Library",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "'Your templates' list ('2 active') showing each saved template's name, Debit/Credit badge, truncated pattern preview, sender header, usage count, an enable/disable switch and a delete action. Templates are toggleable rather than only deletable, so a misfiring rule can be parked without losing the authoring work."
+    },
+    {
+      "id": "design_parser_templates_screen_hdfc_card_spend_template",
+      "label": "HDFC Card Spend Template",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Saved Debit template, pattern 'Rs.{amount} debited from a/c …', sender HDFCBK, used 14 times. It is the same template being authored in the editor above, shown in its persisted form."
+    },
+    {
+      "id": "design_parser_templates_screen_icici_salary_credit_template",
+      "label": "ICICI Salary Credit Template",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Saved Credit template, pattern 'INR {amount} credited to a/c …', sender ICICIB, used 3 times. Demonstrates the same template shape carrying a different currency prefix and the opposite transaction nature."
+    },
+    {
+      "id": "design_parser_templates_screen_template_usage_counter",
+      "label": "Template Usage Counter",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "'Used 14 times' / 'Used 3 times' metadata per saved template. Surfacing hit counts gives the user evidence of which rules actually fire, which is the signal for pruning dead templates."
+    },
+    {
+      "id": "design_parser_templates_screen_builtin_fallback_rules",
+      "label": "Built-in Fallback Rules",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Ship-with-the-app generic rules described as 'Generic fallbacks. Anything these catch is flagged for review.' They guarantee non-zero coverage before the user has authored any template, at the cost of lower trust — hence the automatic review flag on anything they match."
+    },
+    {
+      "id": "design_parser_templates_screen_upi_debit_fallback",
+      "label": "Standard UPI Debit Fallback",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Built-in rule, 'Handles VPA transfers', toggled on."
+    },
+    {
+      "id": "design_parser_templates_screen_neft_imps_credit_fallback",
+      "label": "NEFT / IMPS Credit Fallback",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Built-in rule, 'Handles direct transfers', toggled on. Mirrors the UPI debit fallback on the credit side."
+    },
+    {
+      "id": "design_parser_templates_screen_review_flagging",
+      "label": "Low-Trust Parse Review Flagging",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Anything matched by a generic fallback is flagged for user review rather than silently committed to the ledger. Precision is traded to the user's own templates while recall is covered by fallbacks that must be confirmed."
+    },
+    {
+      "id": "design_parser_templates_screen_offline_first_parsing",
+      "label": "Offline-First On-Device Parsing",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "An 'Offline' chip sits in the status bar while the whole authoring, matching and confidence flow is fully functional. Template matching is designed to run locally on the device, so financial SMS content never needs to leave the phone and parsing works with no connectivity."
+    },
+    {
+      "id": "design_parser_templates_screen_bottom_navigation",
+      "label": "Bottom Navigation (Ledger, Trends, Accounts, Parsed SMS)",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Four-tab bar with Ledger active. 'Parsed SMS' is given top-level navigation weight, signalling that inspecting parser output is a routine task rather than a settings-buried diagnostic."
+    },
+    {
+      "id": "design_parser_templates_screen_parsed_sms_tab",
+      "label": "Parsed SMS Tab",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Destination for the raw-message-to-transaction audit trail; the natural landing place for entries that fallback rules flagged for review."
+    }
+  ],
+  "edges": [
+    {
+      "source": "design_parser_templates_screen_sms_parser_template_editor",
+      "target": "design_parser_templates_screen_sample_message_capture",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_sms_parser_template_editor",
+      "target": "design_parser_templates_screen_pattern_match_rule",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_sms_parser_template_editor",
+      "target": "design_parser_templates_screen_live_match_preview",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_sms_parser_template_editor",
+      "target": "design_parser_templates_screen_transaction_nature_toggle",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_sms_parser_template_editor",
+      "target": "design_parser_templates_screen_sender_header_scope",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_sms_parser_template_editor",
+      "target": "design_parser_templates_screen_template_library",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_sms_parser_template_editor",
+      "target": "design_parser_templates_screen_builtin_fallback_rules",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_sms_parser_template_editor",
+      "target": "design_parser_templates_screen_bottom_navigation",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_sample_message_capture",
+      "target": "design_parser_templates_screen_pattern_match_rule",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_bracketed_token_syntax",
+      "target": "design_parser_templates_screen_pattern_match_rule",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_pattern_match_rule",
+      "target": "design_parser_templates_screen_regex_synced_indicator",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_bracketed_token_syntax",
+      "target": "design_parser_templates_screen_regex_synced_indicator",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_pattern_match_rule",
+      "target": "design_parser_templates_screen_live_match_preview",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_live_match_preview",
+      "target": "design_parser_templates_screen_extracted_field_set",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_live_match_preview",
+      "target": "design_parser_templates_screen_match_confidence_score",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_bracketed_token_syntax",
+      "target": "design_parser_templates_screen_extracted_field_set",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_masked_account_display",
+      "target": "design_parser_templates_screen_extracted_field_set",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_template_library",
+      "target": "design_parser_templates_screen_hdfc_card_spend_template",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_template_library",
+      "target": "design_parser_templates_screen_icici_salary_credit_template",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_template_library",
+      "target": "design_parser_templates_screen_template_usage_counter",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_hdfc_card_spend_template",
+      "target": "design_parser_templates_screen_pattern_match_rule",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_hdfc_card_spend_template",
+      "target": "design_parser_templates_screen_sender_header_scope",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_hdfc_card_spend_template",
+      "target": "design_parser_templates_screen_transaction_nature_toggle",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_icici_salary_credit_template",
+      "target": "design_parser_templates_screen_transaction_nature_toggle",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_hdfc_card_spend_template",
+      "target": "design_parser_templates_screen_icici_salary_credit_template",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_builtin_fallback_rules",
+      "target": "design_parser_templates_screen_upi_debit_fallback",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_builtin_fallback_rules",
+      "target": "design_parser_templates_screen_neft_imps_credit_fallback",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_upi_debit_fallback",
+      "target": "design_parser_templates_screen_neft_imps_credit_fallback",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_review_flagging",
+      "target": "design_parser_templates_screen_builtin_fallback_rules",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_review_flagging",
+      "target": "design_parser_templates_screen_match_confidence_score",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_builtin_fallback_rules",
+      "target": "design_parser_templates_screen_template_library",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_sender_header_scope",
+      "target": "design_parser_templates_screen_pattern_match_rule",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_offline_first_parsing",
+      "target": "design_parser_templates_screen_live_match_preview",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_offline_first_parsing",
+      "target": "design_parser_templates_screen_masked_account_display",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.65,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_bottom_navigation",
+      "target": "design_parser_templates_screen_parsed_sms_tab",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_parsed_sms_tab",
+      "target": "design_parser_templates_screen_review_flagging",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_parsed_sms_tab",
+      "target": "design_parser_templates_screen_template_library",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_template_usage_counter",
+      "target": "design_parser_templates_screen_match_confidence_score",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.65,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_parser_templates_screen_extracted_field_set",
+      "target": "design_parser_templates_screen_bottom_navigation",
+      "relation": "shares_data_with",
+      "confidence": "AMBIGUOUS",
+      "confidence_score": 0.25,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "template_authoring_and_verification_flow",
+      "label": "Template Authoring and Verification Flow",
+      "nodes": [
+        "design_parser_templates_screen_sample_message_capture",
+        "design_parser_templates_screen_bracketed_token_syntax",
+        "design_parser_templates_screen_pattern_match_rule",
+        "design_parser_templates_screen_live_match_preview",
+        "design_parser_templates_screen_match_confidence_score",
+        "design_parser_templates_screen_template_library"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png"
+    },
+    {
+      "id": "sms_parse_rule_sources",
+      "label": "Sources of SMS Parse Rules",
+      "nodes": [
+        "design_parser_templates_screen_hdfc_card_spend_template",
+        "design_parser_templates_screen_icici_salary_credit_template",
+        "design_parser_templates_screen_upi_debit_fallback",
+        "design_parser_templates_screen_neft_imps_credit_fallback",
+        "design_parser_templates_screen_builtin_fallback_rules"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png"
+    },
+    {
+      "id": "transaction_record_shape",
+      "label": "Parsed Transaction Record Shape",
+      "nodes": [
+        "design_parser_templates_screen_extracted_field_set",
+        "design_parser_templates_screen_masked_account_display",
+        "design_parser_templates_screen_transaction_nature_toggle",
+        "design_parser_templates_screen_sender_header_scope"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/parser_templates/screen.png"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

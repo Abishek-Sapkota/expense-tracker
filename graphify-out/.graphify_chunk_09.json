@@ -1,0 +1,562 @@
+{
+  "nodes": [
+    {
+      "id": "design_tools_screen_tools_screen",
+      "label": "Ledger Tools Screen (Mobile UI Mockup)",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_sms_permission_card",
+      "label": "SMS Permission Status Card",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_offline_first_privacy",
+      "label": "Offline-First Air-Gapped Privacy Guarantee",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_messages_section",
+      "label": "Messages Section (Sync SMS / Full Rescan)",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_sync_sms_action",
+      "label": "Sync SMS Action (Incremental Read)",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_full_rescan_action",
+      "label": "Full Rescan Action (Whole-Inbox Re-read)",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_idempotent_reruns",
+      "label": "Idempotent Re-runnable Operations (No Duplicates)",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_parsing_section",
+      "label": "Parsing Section (Reparse)",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_reparse_action",
+      "label": "Reparse Action (Rebuild Transactions From Stored Messages)",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_manual_expense_preservation",
+      "label": "Manual Expense Preservation",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_parsing_templates",
+      "label": "Parsing Templates",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_backup_section",
+      "label": "Backup Section (Export / Import)",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_single_json_backup",
+      "label": "Single-File JSON Backup Format",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_local_sqlite_storage",
+      "label": "Local SQLite Storage",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_bottom_navigation",
+      "label": "Bottom Navigation (Ledger, Trends, Accounts, Parsed SMS)",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_card_section_layout",
+      "label": "Grouped Card Section Layout Pattern",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_primary_secondary_action_pairing",
+      "label": "Primary/Secondary Paired Action Buttons",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_offline_status_indicator",
+      "label": "Offline Status Indicator (Status Bar Chip)",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_tools_screen_sms_message_store",
+      "label": "Stored SMS Message Store",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "design_tools_screen_tools_screen",
+      "target": "design_tools_screen_sms_permission_card",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_tools_screen",
+      "target": "design_tools_screen_messages_section",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_tools_screen",
+      "target": "design_tools_screen_parsing_section",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_tools_screen",
+      "target": "design_tools_screen_backup_section",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_tools_screen",
+      "target": "design_tools_screen_bottom_navigation",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_tools_screen",
+      "target": "design_tools_screen_local_sqlite_storage",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_offline_first_privacy",
+      "target": "design_tools_screen_sms_permission_card",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_offline_first_privacy",
+      "target": "design_tools_screen_offline_status_indicator",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_offline_first_privacy",
+      "target": "design_tools_screen_local_sqlite_storage",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_offline_first_privacy",
+      "target": "design_tools_screen_single_json_backup",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_messages_section",
+      "target": "design_tools_screen_sync_sms_action",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_messages_section",
+      "target": "design_tools_screen_full_rescan_action",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_idempotent_reruns",
+      "target": "design_tools_screen_full_rescan_action",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_idempotent_reruns",
+      "target": "design_tools_screen_sync_sms_action",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_sync_sms_action",
+      "target": "design_tools_screen_sms_message_store",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_full_rescan_action",
+      "target": "design_tools_screen_sms_message_store",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_reparse_action",
+      "target": "design_tools_screen_sms_message_store",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_parsing_section",
+      "target": "design_tools_screen_reparse_action",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_reparse_action",
+      "target": "design_tools_screen_parsing_templates",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_manual_expense_preservation",
+      "target": "design_tools_screen_reparse_action",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_backup_section",
+      "target": "design_tools_screen_single_json_backup",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_single_json_backup",
+      "target": "design_tools_screen_sms_message_store",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_single_json_backup",
+      "target": "design_tools_screen_parsing_templates",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_local_sqlite_storage",
+      "target": "design_tools_screen_sms_message_store",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_card_section_layout",
+      "target": "design_tools_screen_tools_screen",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_primary_secondary_action_pairing",
+      "target": "design_tools_screen_messages_section",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_primary_secondary_action_pairing",
+      "target": "design_tools_screen_backup_section",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_full_rescan_action",
+      "target": "design_tools_screen_reparse_action",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_offline_status_indicator",
+      "target": "design_tools_screen_sms_permission_card",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_tools_screen_bottom_navigation",
+      "target": "design_tools_screen_sms_message_store",
+      "relation": "conceptually_related_to",
+      "confidence": "AMBIGUOUS",
+      "confidence_score": 0.3,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "tools_screen_sms_to_transaction_pipeline",
+      "label": "SMS-to-Transaction Data Pipeline (ingest, store, parse)",
+      "nodes": [
+        "design_tools_screen_sync_sms_action",
+        "design_tools_screen_full_rescan_action",
+        "design_tools_screen_sms_message_store",
+        "design_tools_screen_reparse_action",
+        "design_tools_screen_parsing_templates"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png"
+    },
+    {
+      "id": "tools_screen_offline_trust_surface",
+      "label": "Offline/Privacy Trust Surface Elements",
+      "nodes": [
+        "design_tools_screen_offline_status_indicator",
+        "design_tools_screen_sms_permission_card",
+        "design_tools_screen_offline_first_privacy",
+        "design_tools_screen_local_sqlite_storage"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png"
+    },
+    {
+      "id": "tools_screen_maintenance_card_sections",
+      "label": "Maintenance Tool Card Sections",
+      "nodes": [
+        "design_tools_screen_messages_section",
+        "design_tools_screen_parsing_section",
+        "design_tools_screen_backup_section",
+        "design_tools_screen_card_section_layout"
+      ],
+      "relation": "implement",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/home/abi/stuff/expense_tracker/design/tools/screen.png"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

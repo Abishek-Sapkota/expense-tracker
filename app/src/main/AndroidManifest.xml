@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Deliberately NO android.permission.INTERNET.
+         The app cannot reach the network even if a dependency tries to. -->
+
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <!-- Only ever used to ask the user what a transaction they just made was for.
+         The app posts nothing else, and never posts without a transaction behind it. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+
+    <!-- Lets the icon picker list apps that have a launcher entry, so a bank can wear its
+         own app's icon. Launcher entries only, not QUERY_ALL_PACKAGES: the app reads the
+         label and icon of apps the user already sees on their home screen, and nothing
+         leaves the phone — there is no INTERNET permission above. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".ExpenseApp"
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.ExpenseTracker">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".sms.SmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Books transactions from banks and wallets that only push a notification.
+             Bound by the system alone: BIND_NOTIFICATION_LISTENER_SERVICE is a signature
+             permission, so no other app can reach this service. It stays inert until the
+             user grants notification access in system settings. -->
+        <service
+            android:name=".notification.TxnNotificationListener"
+            android:exported="true"
+            android:label="@string/notification_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- Receives the typed reply from the "what was this for?" notification.
+             Not exported: only the pending intent this app created can reach it. -->
+        <receiver
+            android:name=".notification.RemarkReplyReceiver"
+            android:exported="false" />
+
+    </application>
+</manifest>

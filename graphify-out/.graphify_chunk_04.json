@@ -1,0 +1,486 @@
+{
+  "nodes": [
+    {
+      "id": "design_date_range_picker_screen",
+      "label": "Date Range Picker Screen Mockup",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_select_range_sheet",
+      "label": "Select Range Bottom Sheet",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_range_summary_header",
+      "label": "Range Summary Header (1 Sep - 20 Sep 2026)",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_selection_count_badge",
+      "label": "Selection Count Badge (20 days selected)",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_calendar_grid",
+      "label": "Monthly Calendar Grid",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_month_navigator",
+      "label": "Month Navigator (September 2026 dropdown + chevrons)",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_range_highlight_band",
+      "label": "Continuous Range Highlight Band",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_endpoint_emphasis",
+      "label": "Range Endpoint Emphasis (filled start/end chips)",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_quick_range_presets",
+      "label": "Quick Range Preset Chips (This Month / Last 30 Days / Previous Cycle)",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_apply_range_action",
+      "label": "Apply Range Primary Button",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_apply_top_action",
+      "label": "Top Bar Apply Shortcut",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_dismiss_actions",
+      "label": "Dismiss Actions (Close X / Cancel)",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_local_sms_ledger",
+      "label": "Local SMS Ledger",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_privacy_scope_note",
+      "label": "On-Device Filtering Assurance Note",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_transaction_count_feedback",
+      "label": "Live Transaction Count Feedback",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_terracotta_theme",
+      "label": "Terracotta Accent Theme on Warm Neutral Ground",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_date_range_picker_screen_billing_cycle_model",
+      "label": "Billing Cycle Period Model",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "design_date_range_picker_screen",
+      "target": "design_date_range_picker_screen_select_range_sheet",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_select_range_sheet",
+      "target": "design_date_range_picker_screen_range_summary_header",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_select_range_sheet",
+      "target": "design_date_range_picker_screen_calendar_grid",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_select_range_sheet",
+      "target": "design_date_range_picker_screen_quick_range_presets",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_select_range_sheet",
+      "target": "design_date_range_picker_screen_apply_range_action",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_select_range_sheet",
+      "target": "design_date_range_picker_screen_dismiss_actions",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_calendar_grid",
+      "target": "design_date_range_picker_screen_month_navigator",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_calendar_grid",
+      "target": "design_date_range_picker_screen_range_highlight_band",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_range_highlight_band",
+      "target": "design_date_range_picker_screen_endpoint_emphasis",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_endpoint_emphasis",
+      "target": "design_date_range_picker_screen_calendar_grid",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_calendar_grid",
+      "target": "design_date_range_picker_screen_range_summary_header",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_range_summary_header",
+      "target": "design_date_range_picker_screen_selection_count_badge",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_selection_count_badge",
+      "target": "design_date_range_picker_screen_transaction_count_feedback",
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_transaction_count_feedback",
+      "target": "design_date_range_picker_screen_range_summary_header",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_range_summary_header",
+      "target": "design_date_range_picker_screen_local_sms_ledger",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_privacy_scope_note",
+      "target": "design_date_range_picker_screen_local_sms_ledger",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_apply_range_action",
+      "target": "design_date_range_picker_screen_local_sms_ledger",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_quick_range_presets",
+      "target": "design_date_range_picker_screen_billing_cycle_model",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_quick_range_presets",
+      "target": "design_date_range_picker_screen_calendar_grid",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_quick_range_presets",
+      "target": "design_date_range_picker_screen_calendar_grid",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_apply_top_action",
+      "target": "design_date_range_picker_screen_apply_range_action",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_terracotta_theme",
+      "target": "design_date_range_picker_screen_range_highlight_band",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_terracotta_theme",
+      "target": "design_date_range_picker_screen_apply_range_action",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_billing_cycle_model",
+      "target": "design_date_range_picker_screen_local_sms_ledger",
+      "relation": "conceptually_related_to",
+      "confidence": "AMBIGUOUS",
+      "confidence_score": 0.3,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_month_navigator",
+      "target": "design_date_range_picker_screen_billing_cycle_model",
+      "relation": "conceptually_related_to",
+      "confidence": "AMBIGUOUS",
+      "confidence_score": 0.25,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_date_range_picker_screen_dismiss_actions",
+      "target": "design_date_range_picker_screen_apply_range_action",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "date_range_selection_flow",
+      "label": "Date Range Selection and Commit Flow",
+      "nodes": [
+        "design_date_range_picker_screen_calendar_grid",
+        "design_date_range_picker_screen_quick_range_presets",
+        "design_date_range_picker_screen_range_summary_header",
+        "design_date_range_picker_screen_apply_range_action",
+        "design_date_range_picker_screen_apply_top_action"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png"
+    },
+    {
+      "id": "selection_consequence_preview",
+      "label": "Preview of Filter Consequences Before Commit",
+      "nodes": [
+        "design_date_range_picker_screen_selection_count_badge",
+        "design_date_range_picker_screen_transaction_count_feedback",
+        "design_date_range_picker_screen_privacy_scope_note",
+        "design_date_range_picker_screen_local_sms_ledger"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/home/abi/stuff/expense_tracker/design/date_range_picker/screen.png"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

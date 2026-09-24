@@ -1,0 +1,286 @@
+{
+  "nodes": [
+    {
+      "id": "design_import_mode_dialog_screen_import_mode_dialog",
+      "label": "Import Mode Dialog",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_import_mode_dialog_screen_replace_mode_option",
+      "label": "Replace Import Mode Option",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_import_mode_dialog_screen_destructive_import_warning",
+      "label": "Destructive Import Warning Copy",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_import_mode_dialog_screen_cache_backup_notice",
+      "label": "Cache Backup Info Notice",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_import_mode_dialog_screen_confirm_import_action",
+      "label": "Confirm Import Button",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_import_mode_dialog_screen_cancel_action",
+      "label": "Cancel Button",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_import_mode_dialog_screen_add_transaction_screen",
+      "label": "Add Transaction Screen (underlying)",
+      "file_type": "image",
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_import_mode_dialog_screen_import_data_flow",
+      "label": "Data Import Flow",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_import_mode_dialog_screen_local_only_data_model",
+      "label": "On-Device Only Data Model",
+      "file_type": "rationale",
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_import_mode_dialog_screen_domain_entities",
+      "label": "Messages, Transactions and Templates Entities",
+      "file_type": "concept",
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "design_import_mode_dialog_screen_import_mode_dialog",
+      "target": "design_import_mode_dialog_screen_replace_mode_option",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_import_mode_dialog",
+      "target": "design_import_mode_dialog_screen_cache_backup_notice",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_import_mode_dialog",
+      "target": "design_import_mode_dialog_screen_confirm_import_action",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_import_mode_dialog",
+      "target": "design_import_mode_dialog_screen_cancel_action",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_destructive_import_warning",
+      "target": "design_import_mode_dialog_screen_replace_mode_option",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_cache_backup_notice",
+      "target": "design_import_mode_dialog_screen_confirm_import_action",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_replace_mode_option",
+      "target": "design_import_mode_dialog_screen_domain_entities",
+      "relation": "shares_data_with",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_import_mode_dialog",
+      "target": "design_import_mode_dialog_screen_import_data_flow",
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_confirm_import_action",
+      "target": "design_import_mode_dialog_screen_import_data_flow",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_local_only_data_model",
+      "target": "design_import_mode_dialog_screen_destructive_import_warning",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_local_only_data_model",
+      "target": "design_import_mode_dialog_screen_cache_backup_notice",
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_import_mode_dialog",
+      "target": "design_import_mode_dialog_screen_add_transaction_screen",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_add_transaction_screen",
+      "target": "design_import_mode_dialog_screen_domain_entities",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_cache_backup_notice",
+      "target": "design_import_mode_dialog_screen_destructive_import_warning",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "design_import_mode_dialog_screen_cancel_action",
+      "target": "design_import_mode_dialog_screen_destructive_import_warning",
+      "relation": "conceptually_related_to",
+      "confidence": "AMBIGUOUS",
+      "confidence_score": 0.3,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png",
+      "source_location": null,
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "import_mode_confirmation_flow",
+      "label": "Destructive Import Confirmation Flow",
+      "nodes": [
+        "design_import_mode_dialog_screen_import_mode_dialog",
+        "design_import_mode_dialog_screen_replace_mode_option",
+        "design_import_mode_dialog_screen_destructive_import_warning",
+        "design_import_mode_dialog_screen_cache_backup_notice",
+        "design_import_mode_dialog_screen_confirm_import_action",
+        "design_import_mode_dialog_screen_cancel_action"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "/home/abi/stuff/expense_tracker/design/import_mode_dialog/screen.png"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
