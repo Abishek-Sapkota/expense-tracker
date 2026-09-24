@@ -92,6 +92,7 @@ fun SettingsScreen(
     val categories by vm.categories.collectAsStateWithLifecycle()
     val useNepaliCalendar by vm.useNepaliCalendar.collectAsStateWithLifecycle()
     val neutralPalette by vm.neutralPalette.collectAsStateWithLifecycle()
+    val askUncategorised by vm.askUncategorised.collectAsStateWithLifecycle()
 
     /** Which sub-screen is open, or null for the menu itself. */
     var openSection by rememberSaveable { mutableStateOf<SettingsSection?>(null) }
@@ -274,7 +275,9 @@ fun SettingsScreen(
                     onApplyKeywords = vm::applyKeywords,
                     busy = busy,
                     adding = addingCategory,
-                    onAddingChange = { addingCategory = it }
+                    onAddingChange = { addingCategory = it },
+                    askUncategorised = askUncategorised,
+                    onAskUncategorised = vm::setAskUncategorised
                 )
 
                 SettingsSection.APPEARANCE -> AppearanceControls(

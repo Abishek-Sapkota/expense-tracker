@@ -36,7 +36,9 @@ fun CategorySettings(
     busy: Boolean,
     /** Driven by the screen's Add button, which lives outside this list. */
     adding: Boolean,
-    onAddingChange: (Boolean) -> Unit
+    onAddingChange: (Boolean) -> Unit,
+    askUncategorised: Boolean,
+    onAskUncategorised: (Boolean) -> Unit
 ) {
     /** The category being edited, or null when that editor is closed. */
     var editing by remember { mutableStateOf<Category?>(null) }
@@ -49,6 +51,24 @@ fun CategorySettings(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        LedgerCard {
+            Row(
+                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Ask about uncategorised spending", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "When a new payment matches no category, a notification asks what it was " +
+                            "for. Your reply becomes its title and files it by keywords.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(checked = askUncategorised, onCheckedChange = onAskUncategorised)
+            }
+        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(

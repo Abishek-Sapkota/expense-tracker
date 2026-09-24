@@ -62,7 +62,9 @@ convention listed here, update the matching line in the same change.
   arrival timestamp via `DateParser`/`TimeParser` in `SmsParser.occurredAt`), `DefaultRules`.
 - `sms/` — `SmsInboxReader` (history backfill), `SmsReceiver` (live).
 - `notification/` — `TxnNotificationListener`, `NotificationIngest`, `RemarkPrompt` +
-  `RemarkReplyReceiver` (inline reply to add a remark).
+  `RemarkReplyReceiver` (inline reply to add a remark). Asked per `RemarkPromptPolicy`: opted-in
+  sender with no remark, or (setting `askUncategorised`, default on, toggle in Categories)
+  any new debit no category matched; the reply becomes the remark and is run through keywords.
 - `backup/` — `BackupManager`, `BackupSchema` (streaming JSON export/import).
 - `di/ServiceLocator.kt` — `repository(context)`, `backupManager(context)`.
 - `ui/Navigation.kt` — `Destination` enum = bottom bar tabs (HOME/Ledger, TRENDS, LOANS,

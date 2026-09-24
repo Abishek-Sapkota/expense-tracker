@@ -12,11 +12,12 @@ class RemarkPromptPolicyTest {
 
     private fun txn(
         direction: Direction = Direction.DEBIT,
-        remark: String? = null
+        remark: String? = null,
+        categoryId: Long? = null
     ) = Txn(
         id = "t", rawId = "r", amountMinor = 25_000, direction = direction,
         accountTail = null, merchant = "ESEWA", remark = remark, refNumber = null,
-        balanceMinor = null, occurredAt = 0L
+        balanceMinor = null, occurredAt = 0L, categoryId = categoryId
     )
 
     @Test
@@ -55,5 +56,31 @@ class RemarkPromptPolicyTest {
     fun `the sender key is matched exactly, not by prefix`() {
         // "ESEWANEPAL" is a different sender; opting into ESEWA must not opt into it.
         assertFalse(RemarkPromptPolicy.shouldAsk(txn(), "ESEWANEPAL", optedIn))
+    }
+
+    @Test
+    fun `an uncategorised payment is asked about from any sender`() {
+        assertTrue(RemarkPromptPolicy.shouldAsk(txn(), "SANIMA", emptySet(), askUncategorised = true))
+    }
+
+    @Test
+    fun `an uncategorised payment is asked about even when the message had a remark`() {
+        // A bank's remark like "16682242fx7C,2222…" says nothing a category can match.
+        assertTrue(RemarkPromptPolicy.shouldAsk(txn(remark = "16682242fx7C"), "SANIMA", emptySet(), askUncategorised = true))
+    }
+
+    @Test
+    fun `a categorised payment is not asked about for being uncategorised`() {
+        assertFalse(RemarkPromptPolicy.shouldAsk(txn(categoryId = 3), "SANIMA", emptySet(), askUncategorised = true))
+    }
+
+    @Test
+    fun `money in is never asked about`() {
+        assertFalse(RemarkPromptPolicy.shouldAsk(txn(direction = Direction.CREDIT), "SANIMA", emptySet(), askUncategorised = true))
+    }
+
+    @Test
+    fun `with the setting off only opted-in senders are asked`() {
+        assertFalse(RemarkPromptPolicy.shouldAsk(txn(), "SANIMA", emptySet(), askUncategorised = false))
     }
 }

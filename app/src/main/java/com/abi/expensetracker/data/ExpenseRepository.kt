@@ -30,6 +30,7 @@ import com.abi.expensetracker.sms.SmsInboxReader
 import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 
@@ -598,7 +599,8 @@ class ExpenseRepository(
     private suspend fun askWhatFor(parsed: List<Txn>, senderById: Map<String, String>) {
         if (parsed.isEmpty()) return
         val optedIn = settings.remarkPromptSendersOnce()
-        if (optedIn.isEmpty()) return
+        val askUncategorised = settings.askUncategorised.first()
+        if (optedIn.isEmpty() && !askUncategorised) return
 
         val banks = db.bankDao().all()
         val links = db.senderLinkDao().all()
@@ -607,7 +609,7 @@ class ExpenseRepository(
         parsed.forEach { txn ->
             val sender = senderById[txn.id] ?: return@forEach
             val key = SenderNormalizer.normalize(sender)
-            if (!RemarkPromptPolicy.shouldAsk(txn, key, optedIn)) return@forEach
+            if (!RemarkPromptPolicy.shouldAsk(txn, key, optedIn, askUncategorised)) return@forEach
 
             RemarkPrompt.ask(context, txn, resolver.bankFor(sender)?.name)
         }
@@ -621,13 +623,15 @@ class ExpenseRepository(
      */
     suspend fun setRemarkFromPrompt(txnId: String, remark: String) = withContext(Dispatchers.IO) {
         val txn = db.txnDao().byId(txnId) ?: return@withContext
-        db.txnDao().update(
-            txn.copy(
-                remark = remark.trim().ifBlank { null },
-                needsReview = false,
-                userEdited = true
-            )
+        val named = txn.copy(
+            remark = remark.trim().ifBlank { null },
+            needsReview = false,
+            userEdited = true
         )
+        // The answer is a new chance for the keywords: "coffee" files the row under the
+        // coffee category. A category already set is left alone.
+        val categoryId = txn.categoryId ?: categorizer().categoryIdFor(named)
+        db.txnDao().update(named.copy(categoryId = categoryId))
     }
 
     /**

@@ -28,6 +28,7 @@ class SettingsStore(private val context: Context) {
     private val neutralPaletteKey = stringPreferencesKey("neutralPalette")
     private val customAccentKey = intPreferencesKey("customAccentArgb")
     private val remarkPromptSendersKey = stringSetPreferencesKey("remarkPromptSenders")
+    private val askUncategorisedKey = booleanPreferencesKey("askUncategorised")
     private val nepaliCalendarKey = booleanPreferencesKey("useNepaliCalendar")
     private val parserVersionKey = intPreferencesKey("parserVersion")
     private val maintenanceStampKey = longPreferencesKey("maintenanceStamp")
@@ -151,6 +152,13 @@ class SettingsStore(private val context: Context) {
         context.dataStore.data.map { it[remarkPromptSendersKey] ?: emptySet() }
 
     suspend fun remarkPromptSendersOnce(): Set<String> = remarkPromptSenders.first()
+
+    /** Whether a new payment no category matched gets a reply-to-name notification. On by default. */
+    val askUncategorised: Flow<Boolean> = context.dataStore.data.map { it[askUncategorisedKey] ?: true }
+
+    suspend fun setAskUncategorised(enabled: Boolean) {
+        context.dataStore.edit { it[askUncategorisedKey] = enabled }
+    }
 
     suspend fun setRemarkPrompt(senderKey: String, enabled: Boolean) {
         context.dataStore.edit { prefs ->
