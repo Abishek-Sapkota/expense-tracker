@@ -111,7 +111,7 @@ Templates are written as the bank's own message with the changing parts replaced
     Rs.{amount} debited from a/c XX{acct} to {merchant}. Ref {ref}
 
 Placeholders: `{amount}` (required), `{acct}`, `{merchant}`, `{remark}`, `{ref}`,
-`{date}`, `{balance}`, and `{any}` to skip text. Everything else matches literally — punctuation and brackets are
+`{date}`, `{time}`, `{balance}`, and `{any}` to skip text. Everything else matches literally — punctuation and brackets are
 quoted, so a template cannot be malformed the way a hand-written regex can. Whitespace
 runs match flexibly.
 
@@ -121,6 +121,9 @@ rules at 900+, so a user's own template always wins. Both the template text and 
 compiled pattern are stored, so a rule is shown as it was written.
 
 `{date}` takes the transaction date from the message text instead of the arrival time.
+`{time}` does the same for the time of day (`21:00`, `8:41:37 AM`, `1:20PM`); a time with no
+date goes on the arrival day, or the day before when it is clearly after the message
+arrived (a 23:58 payment reported at 00:03).
 The time of day still comes from the message, which keeps same-day transactions in order.
 A date that will not parse, or that lands more than two years from the message, is
 discarded in favour of the arrival time — a misread date can be wrong by decades, while

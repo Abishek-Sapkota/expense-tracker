@@ -1,6 +1,7 @@
 package com.abi.expensetracker.parser
 
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.format.DateTimeParseException
@@ -67,4 +68,29 @@ object DateParser {
             .parseCaseInsensitive()
             .appendPattern(pattern)
             .toFormatter(Locale.ENGLISH)
+}
+
+/**
+ * Reads the time of day a bank wrote into a message: 24-hour ("21:00", "21:00:05") or
+ * 12-hour with a marker ("8:41 AM", "1:20PM", "9.05 a.m."). Returns null rather than
+ * guessing when the text is not a real time.
+ */
+object TimeParser {
+
+    private val SHAPE = Regex("""^(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?\s*([AaPp])?\.?(?:[Mm]\.?)?$""")
+
+    fun parse(raw: String): LocalTime? {
+        val m = SHAPE.matchEntire(raw.trim()) ?: return null
+        var hour = m.groupValues[1].toInt()
+        val minute = m.groupValues[2].toInt()
+        val second = m.groupValues[3].takeIf { it.isNotEmpty() }?.toInt() ?: 0
+        val marker = m.groupValues[4].lowercase()
+        if (minute > 59 || second > 59) return null
+        when (marker) {
+            "a" -> { if (hour !in 1..12) return null; if (hour == 12) hour = 0 }
+            "p" -> { if (hour !in 1..12) return null; if (hour != 12) hour += 12 }
+            else -> if (hour > 23) return null
+        }
+        return LocalTime.of(hour, minute, second)
+    }
 }

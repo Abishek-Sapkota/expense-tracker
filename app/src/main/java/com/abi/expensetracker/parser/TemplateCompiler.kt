@@ -24,6 +24,7 @@ object TemplateCompiler {
         "remark" to "what the money was spent on, as the message words it",
         "ref" to "reference or transaction number",
         "date" to "the date written in the message",
+        "time" to "the time written in the message, e.g. 21:00 or 8:41 AM",
         "balance" to "balance left after the transaction",
         "any" to "skip over anything here"
     )
@@ -34,12 +35,17 @@ object TemplateCompiler {
     private const val DATE =
         """(?:\d{1,2}[-/.\s]{1,2}[A-Za-z]{3,9}[-/.\s,]{1,2}\d{2,4}|\d{1,4}[-/.]\d{1,2}[-/.]\d{2,4})"""
 
+    /** 21:00, 8:41:37 AM, 1:20PM, 9.05 a.m. */
+    private const val TIME =
+        """\d{1,2}[:.]\d{2}(?:[:.]\d{2})?(?:\s?[AaPp]\.?[Mm]\.?)?"""
+
     private fun capture(name: String, isLast: Boolean): String = when (name) {
         "amount" -> """(?<amount>$AMOUNT)"""
         "balance" -> """(?<balance>$AMOUNT)"""
         "acct" -> """(?<acct>\d{3,6})"""
         "ref" -> """(?<ref>[A-Za-z0-9]{4,24})"""
         "date" -> """(?<date>$DATE)"""
+        "time" -> """(?<time>$TIME)"""
         // Lazy while more template follows, greedy at the end. A lazy match with nothing
         // after it to anchor against would capture a single character.
         "merchant" -> if (isLast) """(?<merchant>.+)""" else """(?<merchant>.+?)"""

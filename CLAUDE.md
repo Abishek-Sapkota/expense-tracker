@@ -58,7 +58,8 @@ convention listed here, update the matching line in the same change.
   app like Gmail resolves by bank name appearing in the message body),
   `SenderNormalizer`, `SettingsStore` (DataStore), `StableId` (sha256 ids).
 - `parser/` — pure Kotlin: `SmsParser`, `FieldExtractors`, `Regexes`, `DateParser`,
-  `TemplateCompiler` (`{amount}` style templates to regex), `DefaultRules`.
+  `TemplateCompiler` (`{amount}` style templates to regex; `{date}`/`{time}` override the
+  arrival timestamp via `DateParser`/`TimeParser` in `SmsParser.occurredAt`), `DefaultRules`.
 - `sms/` — `SmsInboxReader` (history backfill), `SmsReceiver` (live).
 - `notification/` — `TxnNotificationListener`, `NotificationIngest`, `RemarkPrompt` +
   `RemarkReplyReceiver` (inline reply to add a remark).

@@ -78,22 +78,30 @@ class SmsParser(
     }
 
     /**
-     * The date the bank stated, when a template captured one; otherwise the moment the
-     * message arrived.
+     * The date and time the bank stated, where a template captured them; otherwise the
+     * moment the message arrived.
      *
      * The message timestamp is the better default — banks write dates a dozen ways and
-     * usually send within seconds of the swipe. But a message can arrive late, or restate
-     * an earlier transaction, and then only the written date is right.
+     * usually send within seconds of the swipe. But a message can arrive late (emails
+     * trail by minutes), or restate an earlier transaction, and then only what the bank
+     * wrote is right.
      *
-     * The time of day always comes from the message, since bank SMS rarely carries one and
-     * keeping it preserves the order of several transactions on the same day.
+     * A written time without a written date belongs to the arrival day — unless that would
+     * put it clearly after the message arrived, which means the transaction was just before
+     * midnight and the message came just after, so it goes on the day before.
      */
     private fun occurredAt(match: MatchResult, message: RawMessage): Long {
-        val written = match.namedOrNull("date")?.let { DateParser.parse(it) }
-            ?: return message.sentAt
+        val arrived = Instant.ofEpochMilli(message.sentAt).atZone(zone)
+        val writtenDate = match.namedOrNull("date")?.let { DateParser.parse(it) }
+        val writtenTime = match.namedOrNull("time")?.let { TimeParser.parse(it) }
+        if (writtenDate == null && writtenTime == null) return message.sentAt
 
-        val timeOfDay = Instant.ofEpochMilli(message.sentAt).atZone(zone).toLocalTime()
-        val candidate = written.atTime(timeOfDay).atZone(zone).toInstant().toEpochMilli()
+        var candidate = (writtenDate ?: arrived.toLocalDate())
+            .atTime(writtenTime ?: arrived.toLocalTime())
+            .atZone(zone).toInstant().toEpochMilli()
+        if (writtenDate == null && candidate > message.sentAt + LATE_NIGHT_SLACK_MILLIS) {
+            candidate -= 24L * 60 * 60 * 1000
+        }
 
         // A date years away from the message is almost certainly not the transaction date
         // — a card expiry or a mis-scanned reference caught by the pattern. The arrival
@@ -108,5 +116,8 @@ class SmsParser(
     private companion object {
         /** Two years either side of the message. */
         const val MAX_DATE_DRIFT_MILLIS = 730L * 24 * 60 * 60 * 1000
+
+        /** A written time this far after arrival is read as the previous day's. */
+        const val LATE_NIGHT_SLACK_MILLIS = 60L * 60 * 1000
     }
 }

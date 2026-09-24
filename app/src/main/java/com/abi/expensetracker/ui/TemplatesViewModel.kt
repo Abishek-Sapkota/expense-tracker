@@ -10,6 +10,7 @@ import com.abi.expensetracker.data.model.Direction
 import com.abi.expensetracker.data.model.Rule
 import com.abi.expensetracker.di.ServiceLocator
 import com.abi.expensetracker.parser.DateParser
+import com.abi.expensetracker.parser.TimeParser
 import com.abi.expensetracker.parser.TemplateCompiler
 import com.abi.expensetracker.parser.namedOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -131,6 +132,10 @@ class TemplatesViewModel(app: Application) : AndroidViewModel(app) {
                         // Showing what the date resolved to, not just the text matched:
                         // day-first parsing is the whole thing worth checking here.
                         add("Date" to (parsed?.toString() ?: "$raw (unreadable)"))
+                    }
+                    match.namedOrNull("time")?.let { raw ->
+                        val parsed = TimeParser.parse(raw)
+                        add("Time" to (parsed?.toString() ?: "$raw (unreadable)"))
                     }
                     match.namedOrNull("balance")?.let { raw ->
                         val minor = Money.parseToMinor(raw)
