@@ -206,9 +206,8 @@ fun HomeScreen(
                 Row(
                     Modifier.fillMaxWidth().padding(bottom = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    OfflineBadge()
                     AssistChip(
                         onClick = { showDuplicates = true },
                         label = { Text("Duplicates ($duplicateCount)") },
@@ -336,7 +335,6 @@ fun HomeScreen(
                 }
             }
 
-            item { OfflineFooter(Modifier.padding(top = 16.dp)) }
             item { Spacer(Modifier.height(24.dp)) }
         }
     }
@@ -480,31 +478,6 @@ fun HomeScreen(
                 showRangePicker = false
             }
         )
-    }
-}
-
-@Composable
-private fun OfflineBadge() {
-    Surface(
-        shape = ChipShape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    ) {
-        Row(
-            Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(
-                Icons.Default.CheckCircle, contentDescription = null,
-                tint = AppTheme.finance.credit, modifier = Modifier.size(14.dp)
-            )
-            Text(
-                "Offline storage",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }
 

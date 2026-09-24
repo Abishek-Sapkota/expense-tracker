@@ -213,33 +213,6 @@ fun AccountsScreen(
                 )
             }
 
-            item {
-                Column(
-                    Modifier.fillMaxWidth().padding(top = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Surface(shape = ChipShape, color = MaterialTheme.colorScheme.surfaceContainer) {
-                        Row(
-                            Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                Icons.Outlined.Lock, contentDescription = null,
-                                tint = AppTheme.finance.credit, modifier = Modifier.size(14.dp)
-                            )
-                            Text("Zero-cloud architecture", style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
-                    Text(
-                        "Sender mapping and notification filters are stored on this phone only.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-            }
             item { Spacer(Modifier.height(88.dp)) }
         }
     }

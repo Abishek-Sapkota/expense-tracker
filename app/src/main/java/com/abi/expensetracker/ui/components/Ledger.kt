@@ -263,34 +263,6 @@ fun NudgeBanner(
 }
 
 /**
- * The offline guarantee, stated plainly at the foot of the ledger.
- *
- * This is the product's whole premise, so it is written as a fact the user can check
- * rather than a marketing badge.
- */
-@Composable
-fun OfflineFooter(modifier: Modifier = Modifier) {
-    // A quiet line, not a card: it is a footnote to the list, not an item in it.
-    Row(
-        modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Icon(
-            Icons.Outlined.Lock, contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp)
-        )
-        Text(
-            "Zero cloud uploads. Messages and parsing stay on this handset.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-/**
  * A circular monogram for a merchant or bank.
  *
  * [glyph] is drawn whole when given — an emoji is more than one char, so the initial-letter

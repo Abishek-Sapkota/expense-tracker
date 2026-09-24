@@ -174,12 +174,11 @@ fun TrendsScreen(vm: TrendsViewModel = viewModel(), resetSignal: Int = 0) {
             item {
                 Row(Modifier.padding(horizontal = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(
-                        Icons.Outlined.VerifiedUser, contentDescription = null,
+                        Icons.Outlined.Info, contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        "Totals exclude money marked as loans and net out split repayments. " +
-                            "Stored offline on this device.",
+                        "Totals exclude money marked as loans and net out split repayments.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -239,23 +238,6 @@ private fun MonthTotalCard(state: TrendsState) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
-                Surface(shape = ChipShape, color = MaterialTheme.colorScheme.surfaceContainer) {
-                    Row(
-                        Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            Icons.Outlined.Lock, contentDescription = null,
-                            tint = AppTheme.finance.credit, modifier = Modifier.size(12.dp)
-                        )
-                        Text(
-                            "Local ledger",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
             }
             Text(
                 Money.format(state.totalMinor),

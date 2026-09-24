@@ -161,23 +161,6 @@ fun LoansScreen(vm: LoansViewModel = viewModel(), resetSignal: Int = 0) {
         ) {
             if (person == null) {
                 item {
-                    Row(
-                        Modifier.padding(start = 4.dp, bottom = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Outlined.VerifiedUser, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            "LOCAL LEDGER",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                item {
                     LoanTotals(
                         state,
                         onFilter = { filter = if (filter == it) LoanFilter.ALL else it },
@@ -281,23 +264,6 @@ fun LoansScreen(vm: LoansViewModel = viewModel(), resetSignal: Int = 0) {
                     EntryRow(entry, nepaliDates, GroupPosition.of(index, person.entries.size)) {
                         editing = entry
                     }
-                }
-            }
-            if (person == null) item {
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 16.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Outlined.CloudOff, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        "  Balances stored locally on this phone",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
             item { Spacer(Modifier.height(88.dp)) }

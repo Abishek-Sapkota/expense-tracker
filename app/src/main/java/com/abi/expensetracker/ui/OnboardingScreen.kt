@@ -301,10 +301,5 @@ private fun DoneStep(accounts: Int) {
             Icons.Outlined.TouchApp, "Tap to edit, hold to select",
             "Tap a transaction to fix it, mark it as a loan or split it; hold to select and delete."
         )
-        Text(
-            "Nothing you set up here leaves this phone.",
-            style = MaterialTheme.typography.bodySmall,
-            color = AppTheme.finance.credit
-        )
     }
 }
