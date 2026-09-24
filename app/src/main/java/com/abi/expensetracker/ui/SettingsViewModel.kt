@@ -177,6 +177,9 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         } else null
 
         val r = backup.importFrom(uri, mode)
+        // A restored backup can bring rows with no category; file them now rather than
+        // leaving it to startup, which no longer runs this on every launch.
+        repository.categorizeUncategorized()
         buildString {
             append("Imported ${r.rawMessages} messages, ${r.transactions} transactions.")
             if (safety != null) append(" Previous data saved to cache as $safety.")

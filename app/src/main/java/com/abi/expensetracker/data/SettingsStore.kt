@@ -29,6 +29,7 @@ class SettingsStore(private val context: Context) {
     private val remarkPromptSendersKey = stringSetPreferencesKey("remarkPromptSenders")
     private val nepaliCalendarKey = booleanPreferencesKey("useNepaliCalendar")
     private val parserVersionKey = intPreferencesKey("parserVersion")
+    private val maintenanceStampKey = longPreferencesKey("maintenanceStamp")
 
     /** Watermark so repeat backfills read only what arrived since the last one. */
     val lastSyncedSmsDate: Flow<Long> =
@@ -157,6 +158,14 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setParserVersion(value: Int) {
         context.dataStore.edit { it[parserVersionKey] = value }
+    }
+
+    /** The install time the one-off startup maintenance last ran for; see ExpenseApp. */
+    suspend fun maintenanceStampOnce(): Long =
+        context.dataStore.data.map { it[maintenanceStampKey] ?: 0L }.first()
+
+    suspend fun setMaintenanceStamp(value: Long) {
+        context.dataStore.edit { it[maintenanceStampKey] = value }
     }
 
     companion object {

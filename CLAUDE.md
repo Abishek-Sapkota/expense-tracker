@@ -114,6 +114,10 @@ Tests: `app/src/test/java/com/abi/expensetracker/{data,parser,notification,ui}/`
   `StateFlow` collected with `collectAsStateWithLifecycle`.
 - Schema change: bump `AppDatabase.version`, add a `Migration`, keep exported schema JSON.
 - Parsing/dedup logic change: bump `PARSER_VERSION` in `ExpenseRepository.kt`.
+- Battery: `ExpenseApp` startup maintenance (dedupe, rule sync, reparse, categorize) runs
+  once per install/update (`maintenanceStamp` = package `lastUpdateTime`), not on every
+  process start — the process also starts in background for each SMS/notification. Never
+  add per-start scans there; no polling loops (the ledger's date flow wakes at midnight).
 - Device DB for debugging (debug build): `adb exec-out run-as com.abi.expensetracker cat
   databases/expenses.db` (also `-wal`, `-shm`), then inspect with `sqlite3`.
 - Comments explain *why* (design reasoning), in full prose; match that density.

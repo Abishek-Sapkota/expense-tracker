@@ -142,14 +142,17 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
      * The current date, re-checked while the screen is watched.
      *
      * A daily limit has to reset at midnight even for a phone that was left on the ledger
-     * overnight, and the window is otherwise fixed at the moment the flow was built. The
-     * poll only runs while something is collecting, and [distinctUntilChanged] means it
-     * costs one comparison a minute and emits once a day.
+     * overnight, and the window is otherwise fixed at the moment the flow was built. It only
+     * runs while something is collecting (the app is on screen) and wakes once a day.
      */
     private val today = flow {
         while (true) {
-            emit(LocalDate.now())
-            delay(60_000)
+            val now = java.time.LocalDateTime.now()
+            emit(now.toLocalDate())
+            // Sleep until just past midnight instead of waking every minute: the date is
+            // all this feeds, and it changes once a day.
+            val nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay()
+            delay(java.time.Duration.between(now, nextMidnight).toMillis() + 1_000)
         }
     }.distinctUntilChanged()
 
