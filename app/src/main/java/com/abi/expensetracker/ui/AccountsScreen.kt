@@ -2,6 +2,7 @@ package com.abi.expensetracker.ui
 
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.abi.expensetracker.ui.components.SyncSmsControl
+import com.abi.expensetracker.ui.components.rememberPostNotificationsState
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.filled.Bolt
@@ -18,6 +19,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.shape.CircleShape
@@ -58,7 +62,9 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AccountsScreen(
     vm: AccountsViewModel = viewModel(),
-    resetSignal: Int = 0
+    resetSignal: Int = 0,
+    /** Set when opened from Settings: a back arrow, and system Back returns there. */
+    onBack: (() -> Unit)? = null
 ) {
     val banks by vm.banks.collectAsStateWithLifecycle()
     val senders by vm.senders.collectAsStateWithLifecycle()
@@ -71,9 +77,10 @@ fun AccountsScreen(
     var newBankIcon by remember { mutableStateOf<String?>(null) }
     /** The saved bank whose icon is being picked, or null when that picker is closed. */
     var iconPickerFor by remember { mutableStateOf<Bank?>(null) }
-    /** The bank an app is being added to, or null when that picker is closed. */
-    var appPickerFor by remember { mutableStateOf<Bank?>(null) }
-    val bankApps by vm.bankApps.collectAsStateWithLifecycle()
+    /** Whether the picker for a notification app is open. */
+    var addingReadApp by remember { mutableStateOf(false) }
+    val readApps by vm.readApps.collectAsStateWithLifecycle()
+    val askUncategorised by vm.askUncategorised.collectAsStateWithLifecycle()
     val notificationApps by vm.notificationApps.collectAsStateWithLifecycle()
     val syncing by vm.syncing.collectAsStateWithLifecycle()
     val syncStatus by vm.syncStatus.collectAsStateWithLifecycle()
@@ -89,6 +96,8 @@ fun AccountsScreen(
         listState.scrollToItem(0)
     }
 
+    if (onBack != null) BackHandler(onBack = onBack)
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = { AddFab(onClick = { addingBank = true }) },
@@ -96,6 +105,13 @@ fun AccountsScreen(
             TopAppBar(
                 expandedHeight = 52.dp,
                 title = { Text("Accounts", style = MaterialTheme.typography.headlineSmall) },
+                navigationIcon = {
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to settings")
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -109,10 +125,7 @@ fun AccountsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                SectionHeader(
-                    "Banks & services",
-                    trailing = if (banks.isEmpty()) null else "${banks.size} active"
-                )
+                SectionHeader("Banks & services")
             }
 
             if (banks.isEmpty()) {
@@ -128,31 +141,41 @@ fun AccountsScreen(
                 }
             }
 
-            items(banks, key = { it.id }) { bank ->
-                BankRow(
-                    bank = bank,
-                    apps = bankApps.filter { it.bankId == bank.id }.map { it.packageName },
-                    onPickIcon = { iconPickerFor = bank },
-                    onAddApp = { appPickerFor = bank },
-                    onRemoveApp = { vm.removeApp(bank, it) },
-                    onDelete = { vm.deleteBank(bank.id) },
-                    // Said once, on the first account, rather than on every card.
-                    showSharedAppHint = bank == banks.first()
+            // One card, one row per account: with the app chips gone each account is just
+            // an icon and a name, and a card apiece was mostly padding.
+            if (banks.isNotEmpty()) item {
+                LedgerCard {
+                    banks.forEachIndexed { index, bank ->
+                        BankRow(
+                            bank = bank,
+                            onPickIcon = { iconPickerFor = bank },
+                            onDelete = { vm.deleteBank(bank.id) }
+                        )
+                        if (index < banks.lastIndex) {
+                            HorizontalDivider(
+                                Modifier.padding(start = 64.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(4.dp))
+                SectionHeader(title = "Notifications from")
+            }
+            item {
+                ReadAppsCard(
+                    apps = readApps,
+                    onAdd = { addingReadApp = true },
+                    onRemove = vm::removeReadApp
                 )
             }
 
             item {
                 Spacer(Modifier.height(4.dp))
-                SectionHeader(
-                    title = "Linked senders",
-                    trailing = if (pendingCount > 0) "$pendingCount unlinked" else null
-                )
-                Text(
-                    "Only the senders you linked. Everything else your phone receives stays " +
-                        "out of the way until you search for it.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                SectionHeader(title = "Linked senders")
                 Surface(
                     onClick = { senderSearchOpen = true },
                     shape = MaterialTheme.shapes.medium,
@@ -175,10 +198,12 @@ fun AccountsScreen(
                         Column(Modifier.weight(1f)) {
                             Text("Find a sender", style = MaterialTheme.typography.titleMedium)
                             if (pendingCount > 0) {
+                                // Muted, not debit red: most senders on a phone are not
+                                // banks, so a big unlinked count is normal, not an alarm.
                                 Text(
                                     "$pendingCount unlinked SMS senders",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = AppTheme.finance.debit
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -208,9 +233,13 @@ fun AccountsScreen(
                     entry = entry,
                     banks = banks,
                     onLink = { bankId -> vm.link(entry.senderKey, bankId) },
-                    onUnlink = { vm.unlink(entry.senderKey) },
-                    onAsksWhatFor = { vm.setAsksWhatFor(entry.senderKey, it) }
+                    onUnlink = { vm.unlink(entry.senderKey) }
                 )
+            }
+
+            item {
+                Spacer(Modifier.height(4.dp))
+                AskWhatForCard(askUncategorised, vm::setAskUncategorised)
             }
 
             item { Spacer(Modifier.height(88.dp)) }
@@ -226,7 +255,6 @@ fun AccountsScreen(
             totalSenders = senders.size,
             onLink = { key, bankId -> vm.link(key, bankId) },
             onUnlink = { key -> vm.unlink(key) },
-            onAsksWhatFor = { key, on -> vm.setAsksWhatFor(key, on) },
             syncing = syncing,
             syncStatus = syncStatus,
             onSync = vm::syncSms,
@@ -284,11 +312,11 @@ fun AccountsScreen(
         )
     }
 
-    appPickerFor?.let { bank ->
+    if (addingReadApp) {
         AppChooserDialog(
-            seen = notificationApps,
-            onDismiss = { appPickerFor = null },
-            onPick = { vm.addApp(bank, it); appPickerFor = null }
+            seen = notificationApps.filter { it.packageName !in readApps },
+            onDismiss = { addingReadApp = false },
+            onPick = { vm.addReadApp(it); addingReadApp = false }
         )
     }
 
@@ -473,45 +501,61 @@ private fun AppIconPicker(selected: String?, onPick: (String?) -> Unit) {
 @Composable
 private fun BankRow(
     bank: Bank,
-    apps: List<String>,
     onPickIcon: () -> Unit,
-    onAddApp: () -> Unit,
-    onRemoveApp: (String) -> Unit,
-    onDelete: () -> Unit,
-    showSharedAppHint: Boolean = false
+    onDelete: () -> Unit
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
+    Row(
+        Modifier.padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        IconButtonSwatch(icon = bank.icon, fallback = bank.name, onClick = onPickIcon)
+        Text(
+            bank.name,
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.weight(1f)
+        )
+        // Behind a menu: set once, and a red Delete on every row was the loudest thing on
+        // the screen for the action taken least.
+        Box {
+            IconButton(onClick = { menuOpen = true }) {
+                Icon(Icons.Filled.MoreVert, contentDescription = "More for ${bank.name}")
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text("Change icon") },
+                    onClick = { menuOpen = false; onPickIcon() }
+                )
+                DropdownMenuItem(
+                    text = { Text("Delete account", color = AppTheme.finance.debit) },
+                    onClick = { menuOpen = false; onDelete() }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The apps whose notifications are read, for every account at once.
+ *
+ * App-wide rather than per account: which account a notification belongs to is read from
+ * the app's name or the message itself, so tying an app to one account added nothing but
+ * the same Gmail chip on every card.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ReadAppsCard(apps: List<String>, onAdd: () -> Unit, onRemove: (String) -> Unit) {
     val context = LocalContext.current
     LedgerCard {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                IconButtonSwatch(icon = bank.icon, fallback = bank.name, onClick = onPickIcon)
+            if (apps.isEmpty()) {
                 Text(
-                    bank.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.weight(1f)
+                    "No app picked, so no notifications are read. Add Gmail, Messages or " +
+                        "your bank's app.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                TextButton(onClick = onPickIcon) {
-                    Text("Icon", style = MaterialTheme.typography.labelMedium)
-                }
-                TextButton(onClick = onDelete) {
-                    Text("Delete", style = MaterialTheme.typography.labelMedium, color = AppTheme.finance.debit)
-                }
-            }
-            // The apps whose notifications are this account's. The ledger then shows the
-            // account's own name and icon for them, never the app's.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "NOTIFICATIONS FROM",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
-                )
-                if (apps.isNotEmpty()) {
-                    Text("Automatic parse", style = MaterialTheme.typography.labelSmall, color = AppTheme.finance.credit)
-                }
             }
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -521,7 +565,7 @@ private fun BankRow(
                     val label = remember(pkg) { appLabel(context, pkg) ?: pkg }
                     InputChip(
                         selected = false,
-                        onClick = { onRemoveApp(pkg) },
+                        onClick = { onRemove(pkg) },
                         label = { Text(label) },
                         avatar = {
                             Monogram(
@@ -531,25 +575,61 @@ private fun BankRow(
                             )
                         },
                         trailingIcon = {
-                            Icon(Icons.Filled.Close, contentDescription = "Remove $label", Modifier.size(16.dp))
+                            Icon(Icons.Filled.Close, contentDescription = "Stop reading $label", Modifier.size(16.dp))
                         },
                         shape = ChipShape
                     )
                 }
                 AssistChip(
-                    onClick = onAddApp,
+                    onClick = onAdd,
                     label = { Text("App") },
                     leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, Modifier.size(16.dp)) },
                     shape = ChipShape
                 )
             }
-            if (showSharedAppHint) {
+        }
+    }
+}
+
+/**
+ * The one "ask what it was for" switch, for every account.
+ *
+ * Only payments no category matched are asked about: the reply is what files them, and a
+ * payment the keywords already filed has nothing to ask.
+ */
+@Composable
+private fun AskWhatForCard(enabled: Boolean, onChange: (Boolean) -> Unit) {
+    LedgerCard {
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Ask what it was for", style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    "The same app (e.g. Gmail) may be added to several accounts; the account " +
-                        "matching the message is used.",
+                    "When a payment matches no category, a notification asks. Your reply " +
+                        "names it and files it by keywords.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+            Switch(checked = enabled, onCheckedChange = onChange)
+        }
+        // The question is a notification, so without that permission it would never
+        // show; say so where the switch is instead of failing silently.
+        val post = rememberPostNotificationsState()
+        if (enabled && !post.granted) {
+            Row(
+                Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Notifications are off for this app, so nothing will be asked.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppTheme.finance.debit,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = post.request) { Text("Allow notifications") }
             }
         }
     }
@@ -569,6 +649,12 @@ private fun AppChooserDialog(seen: List<InstalledApp>, onDismiss: () -> Unit, on
         title = { Text("Notifications from", style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Only the apps you pick are read. Each notification goes to the account " +
+                        "the app is named after, or the account its message names.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 if (seen.isNotEmpty()) {
                     Text("Already sent notifications", style = MaterialTheme.typography.labelMedium)
                     seen.forEach { app ->
@@ -615,7 +701,6 @@ private fun SenderSearchSheet(
     totalSenders: Int,
     onLink: (String, Long) -> Unit,
     onUnlink: (String) -> Unit,
-    onAsksWhatFor: (String, Boolean) -> Unit,
     syncing: Boolean,
     syncStatus: String?,
     onSync: () -> Unit,
@@ -696,8 +781,7 @@ private fun SenderSearchSheet(
                             entry = entry,
                             banks = banks,
                             onLink = { bankId -> onLink(entry.senderKey, bankId) },
-                            onUnlink = { onUnlink(entry.senderKey) },
-                            onAsksWhatFor = { onAsksWhatFor(entry.senderKey, it) }
+                            onUnlink = { onUnlink(entry.senderKey) }
                         )
                     }
                 }
@@ -711,8 +795,7 @@ private fun SenderCard(
     entry: SenderEntry,
     banks: List<Bank>,
     onLink: (Long) -> Unit,
-    onUnlink: () -> Unit,
-    onAsksWhatFor: (Boolean) -> Unit
+    onUnlink: () -> Unit
 ) {
     val linked = entry.bankId != null
 
@@ -809,28 +892,6 @@ private fun SenderCard(
                     emptyText = "No bank matches that",
                     modifier = Modifier.weight(1f)
                 )
-            }
-
-            // Per sender, because the answer differs per sender: a bank that already
-            // writes the merchant into its message has nothing to ask about, and a wallet
-            // that only ever says "payment successful" has everything to ask about.
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        "Ask what it was for",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        "A notification you can reply to, right after a payment.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(checked = entry.asksWhatFor, onCheckedChange = onAsksWhatFor)
             }
         }
     }

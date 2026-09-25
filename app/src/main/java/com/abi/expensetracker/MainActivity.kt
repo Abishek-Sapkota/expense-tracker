@@ -36,7 +36,6 @@ import com.abi.expensetracker.ui.Destination
 import com.abi.expensetracker.ui.HomeScreen
 import com.abi.expensetracker.ui.LedgerBottomBar
 import com.abi.expensetracker.ui.components.AddFab
-import com.abi.expensetracker.ui.AccountsScreen
 import com.abi.expensetracker.ui.OnboardingScreen
 import com.abi.expensetracker.ui.LoansScreen
 import com.abi.expensetracker.ui.SettingsScreen
@@ -50,6 +49,7 @@ import com.abi.expensetracker.ui.theme.ThemeMode
 import com.abi.expensetracker.ui.theme.accentPaletteFrom
 import com.abi.expensetracker.ui.theme.palette
 import com.abi.expensetracker.ui.theme.PillShape
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -119,8 +119,11 @@ class MainActivity : ComponentActivity() {
                     .collectAsStateWithLifecycle(initialValue = null)
                 LaunchedEffect(onboardingDone) {
                     // An install that already has accounts was set up before the guide
-                    // existed; it does not need walking through it.
+                    // existed; it does not need walking through it. Only when the flag was
+                    // never written: a rerun from Settings writes false on purpose, and
+                    // skipping it here is what made "Run setup guide again" do nothing.
                     if (onboardingDone == false &&
+                        !settings.onboardingDecided.first() &&
                         ServiceLocator.repository(context).bankCount() > 0
                     ) settings.setOnboardingDone(true)
                 }
@@ -183,7 +186,6 @@ class MainActivity : ComponentActivity() {
                             )
                             Destination.TRENDS -> TrendsScreen(resetSignal = reselects[Destination.TRENDS] ?: 0)
                             Destination.LOANS -> LoansScreen(resetSignal = reselects[Destination.LOANS] ?: 0)
-                            Destination.ACCOUNTS -> AccountsScreen(resetSignal = reselects[Destination.ACCOUNTS] ?: 0)
                             Destination.SETTINGS -> SettingsScreen(resetSignal = reselects[Destination.SETTINGS] ?: 0)
                         }
                     }

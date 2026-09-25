@@ -7,7 +7,6 @@ import com.abi.expensetracker.data.InstalledApp
 import com.abi.expensetracker.data.SenderNormalizer
 import com.abi.expensetracker.data.appLabel
 import com.abi.expensetracker.data.model.Bank
-import com.abi.expensetracker.data.model.BankApp
 import com.abi.expensetracker.data.SettingsStore
 import com.abi.expensetracker.di.ServiceLocator
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,8 +33,6 @@ data class SenderEntry(
     val messageCount: Int,
     val bankId: Long?,
     val bankName: String?,
-    /** Whether a payment from this sender asks what it was for. */
-    val asksWhatFor: Boolean,
     /** The installed app behind a notification sender, which SMS senders never have. */
     val appPackage: String? = null,
     val appLabel: String? = null
@@ -50,16 +47,24 @@ class AccountsViewModel(app: Application) : AndroidViewModel(app) {
     val banks: StateFlow<List<Bank>> = repository.observeBanks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val bankApps: StateFlow<List<BankApp>> = repository.observeBankApps()
+    /** Packages whose notifications are read, app-wide rather than per account. */
+    val readApps: StateFlow<List<String>> = repository.observeNotificationApps()
+        .map { it.sortedBy { pkg -> appLabel(getApplication(), pkg)?.lowercase() ?: pkg } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** The one "ask what it was for" switch, for payments no category matched. */
+    val askUncategorised: StateFlow<Boolean> = settings.askUncategorised
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun setAskUncategorised(enabled: Boolean) =
+        viewModelScope.launch { settings.setAskUncategorised(enabled) }
 
     /** Every sender, notification apps included, before the sender list drops the apps. */
     private val allSenders: StateFlow<List<SenderEntry>> = combine(
         repository.observeSenders(),
         repository.observeBanks(),
-        repository.observeSenderLinks(),
-        settings.remarkPromptSenders
-    ) { senderCounts, bankList, links, promptKeys ->
+        repository.observeSenderLinks()
+    ) { senderCounts, bankList, links ->
         val bankById = bankList.associateBy { it.id }
         val bankIdByKey = links.associate { it.senderKey to it.bankId }
 
@@ -79,7 +84,6 @@ class AccountsViewModel(app: Application) : AndroidViewModel(app) {
                     messageCount = group.sumOf { it.messageCount },
                     bankId = bankId,
                     bankName = bankId?.let { bankById[it]?.name },
-                    asksWhatFor = key in promptKeys,
                     appPackage = app?.first,
                     appLabel = app?.second
                 )
@@ -89,14 +93,14 @@ class AccountsViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
-     * SMS senders only. Apps are assigned from each account's own box instead, so they are
+     * SMS senders only. Apps are picked in the app-wide notifications list instead, so they are
      * picked by name and icon rather than found by package id in a list of short codes.
      */
     val senders: StateFlow<List<SenderEntry>> = allSenders
         .map { all -> all.filter { it.appPackage == null } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Apps whose notifications the app has read, offered first when adding one to an account. */
+    /** Apps whose notifications the app has read, offered first in the app picker. */
     val notificationApps: StateFlow<List<InstalledApp>> = allSenders
         .map { all ->
             all.mapNotNull { e -> e.appPackage?.let { InstalledApp(it, e.appLabel ?: it) } }
@@ -104,11 +108,11 @@ class AccountsViewModel(app: Application) : AndroidViewModel(app) {
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun addApp(bank: Bank, packageName: String) =
-        viewModelScope.launch { repository.addBankApp(bank, packageName) }
+    fun addReadApp(packageName: String) =
+        viewModelScope.launch { repository.setNotificationApp(packageName, true) }
 
-    fun removeApp(bank: Bank, packageName: String) =
-        viewModelScope.launch { repository.removeBankApp(bank, packageName) }
+    fun removeReadApp(packageName: String) =
+        viewModelScope.launch { repository.setNotificationApp(packageName, false) }
 
     private val _senderQuery = MutableStateFlow("")
 
@@ -194,6 +198,4 @@ class AccountsViewModel(app: Application) : AndroidViewModel(app) {
         _syncing.value = false
     }
 
-    fun setAsksWhatFor(senderKey: String, enabled: Boolean) =
-        viewModelScope.launch { settings.setRemarkPrompt(senderKey, enabled) }
 }

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,13 +26,16 @@ class DuplicatesViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Today by default: duplicates are reviewed as they arrive, not as history. */
     private val _selection = MutableStateFlow(PeriodSelection())
-    val selection: StateFlow<PeriodSelection> = _selection.asStateFlow()
+    private val settings = SettingsStore(app)
+    val selection: StateFlow<PeriodSelection> =
+        combine(_selection, settings.useNepaliCalendar) { sel, nepali -> sel.copy(nepali = nepali) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, PeriodSelection())
 
-    val rows: StateFlow<List<DuplicateRow>> = _selection
+    val rows: StateFlow<List<DuplicateRow>> = selection
         .flatMapLatest { repository.observeDuplicates(it.range) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val useNepaliCalendar: StateFlow<Boolean> = SettingsStore(app).useNepaliCalendar
+    val useNepaliCalendar: StateFlow<Boolean> = settings.useNepaliCalendar
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _status = MutableStateFlow<String?>(null)

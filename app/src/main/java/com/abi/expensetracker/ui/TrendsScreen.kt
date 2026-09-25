@@ -164,26 +164,10 @@ fun TrendsScreen(vm: TrendsViewModel = viewModel(), resetSignal: Int = 0) {
 
             item { MonthTotalCard(state) }
             item { DailySpendCard(state, window) }
-            item {
-                SectionHeader(
-                    title = "By category",
-                    trailing = "Tap to see transactions"
-                )
-            }
+            // The chevrons already say the rows open; the loans/splits note lives once, in
+            // the total card, and only when it changed the number.
+            item { SectionHeader(title = "By category") }
             item { CategoryCard(state.categories, onOpen = vm::openCategory) }
-            item {
-                Row(Modifier.padding(horizontal = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(
-                        Icons.Outlined.Info, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        "Totals exclude money marked as loans and net out split repayments.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
             item { Spacer(Modifier.height(24.dp)) }
         }
     }
@@ -198,28 +182,26 @@ private fun MonthSwitcher(
     onPrevious: () -> Unit,
     onNext: () -> Unit
 ) {
-    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            TextButton(onClick = onPrevious) {
-                Icon(Icons.Filled.ChevronLeft, contentDescription = null, Modifier.size(20.dp))
-                Text("Previous")
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(label, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    otherLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            TextButton(onClick = onNext, enabled = canGoForward) {
-                Text("Next")
-                Icon(Icons.Filled.ChevronRight, contentDescription = null, Modifier.size(20.dp))
-            }
+    // A bare row rather than a card: it is navigation, not content, and a filled box
+    // here weighed as much as the total it sits above.
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        IconButton(onClick = onPrevious) {
+            Icon(Icons.Filled.ChevronLeft, contentDescription = "Previous month")
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(label, style = MaterialTheme.typography.titleMedium)
+            Text(
+                otherLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        IconButton(onClick = onNext, enabled = canGoForward) {
+            Icon(Icons.Filled.ChevronRight, contentDescription = "Next month")
         }
     }
 }
@@ -284,9 +266,13 @@ private fun MonthTotalCard(state: TrendsState) {
                             Icons.Outlined.Info, contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp)
                         )
+                        // Only the parts that moved the total: "₹0.00 recovered" is noise.
+                        val parts = listOfNotNull(
+                            state.loanExcludedMinor.takeIf { it > 0 }?.let { "${Money.format(it)} in loans" },
+                            state.recoveredMinor.takeIf { it > 0 }?.let { "${Money.format(it)} recovered from splits" }
+                        )
                         Text(
-                            "Excludes ${Money.format(state.loanExcludedMinor)} in loans and " +
-                                "${Money.format(state.recoveredMinor)} recovered from splits",
+                            "Excludes " + parts.joinToString(" and "),
                             style = MaterialTheme.typography.bodySmall.merge(LocalTabularStyle.current),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -314,14 +300,11 @@ private fun DailySpendCard(state: TrendsState, window: com.abi.expensetracker.da
                     )
                     Text("Daily spend", style = MaterialTheme.typography.titleMedium)
                 }
-                Surface(shape = ChipShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                    Text(
-                        "${state.recordedDays} days recorded",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-                    )
-                }
+                Text(
+                    "${state.recordedDays} days recorded",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             SpendBars(state.daily, state.busiestDay?.day, Modifier.fillMaxWidth().height(150.dp))
@@ -329,7 +312,7 @@ private fun DailySpendCard(state: TrendsState, window: com.abi.expensetracker.da
                 // Every fifth day labelled; thirty labels would not fit and say no more.
                 listOf(1, 5, 10, 15, 20, 25, state.daily.size).distinct().forEach { d ->
                     Text(
-                        "D$d",
+                        "$d",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (d == state.busiestDay?.day) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant

@@ -1,7 +1,6 @@
 package com.abi.expensetracker.ui
 
 import com.abi.expensetracker.ui.theme.AppTheme
-import com.abi.expensetracker.ui.components.rememberPostNotificationsState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Color
@@ -38,9 +37,7 @@ fun CategorySettings(
     busy: Boolean,
     /** Driven by the screen's Add button, which lives outside this list. */
     adding: Boolean,
-    onAddingChange: (Boolean) -> Unit,
-    askUncategorised: Boolean,
-    onAskUncategorised: (Boolean) -> Unit
+    onAddingChange: (Boolean) -> Unit
 ) {
     /** The category being edited, or null when that editor is closed. */
     var editing by remember { mutableStateOf<Category?>(null) }
@@ -53,41 +50,6 @@ fun CategorySettings(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
-        LedgerCard {
-            Row(
-                Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Ask about uncategorised spending", style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        "When a new payment matches no category, a notification asks what it was " +
-                            "for. Your reply becomes its title and files it by keywords.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(checked = askUncategorised, onCheckedChange = onAskUncategorised)
-            }
-            // The question is a notification, so without that permission it would never
-            // show; say so where the switch is instead of failing silently.
-            val post = rememberPostNotificationsState()
-            if (askUncategorised && !post.granted) {
-                Row(
-                    Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Notifications are off for this app, so nothing will be asked.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppTheme.finance.debit,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(onClick = post.request) { Text("Allow notifications") }
-                }
-            }
-        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(

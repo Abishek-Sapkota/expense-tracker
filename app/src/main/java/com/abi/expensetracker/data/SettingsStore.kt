@@ -27,8 +27,8 @@ class SettingsStore(private val context: Context) {
     private val themeModeKey = stringPreferencesKey("themeMode")
     private val neutralPaletteKey = stringPreferencesKey("neutralPalette")
     private val customAccentKey = intPreferencesKey("customAccentArgb")
-    private val remarkPromptSendersKey = stringSetPreferencesKey("remarkPromptSenders")
     private val askUncategorisedKey = booleanPreferencesKey("askUncategorised")
+    private val notificationAppsKey = stringSetPreferencesKey("notificationApps")
     private val nepaliCalendarKey = booleanPreferencesKey("useNepaliCalendar")
     private val parserVersionKey = intPreferencesKey("parserVersion")
     private val maintenanceStampKey = longPreferencesKey("maintenanceStamp")
@@ -55,6 +55,13 @@ class SettingsStore(private val context: Context) {
 
     /** Whether the first-run guide has been finished (or skipped for an existing setup). */
     val onboardingDone: Flow<Boolean> = context.dataStore.data.map { it[onboardingDoneKey] ?: false }
+
+    /**
+     * Whether the guide flag was ever written. Unset only on an install that has never
+     * finished or rerun the guide, which is the one case where existing accounts should
+     * skip it; a "Run setup guide again" writes false and must not be skipped.
+     */
+    val onboardingDecided: Flow<Boolean> = context.dataStore.data.map { onboardingDoneKey in it }
 
     suspend fun setOnboardingDone(done: Boolean) {
         context.dataStore.edit { it[onboardingDoneKey] = done }
@@ -141,18 +148,6 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[themeModeKey] = value }
     }
 
-    /**
-     * Normalised sender keys that should ask what a transaction was for.
-     *
-     * Opt-in per sender, and empty by default. A bank that already writes the merchant
-     * into its message needs no prompt, and being asked about every transaction from
-     * every sender is how a helpful notification becomes one the user turns off.
-     */
-    val remarkPromptSenders: Flow<Set<String>> =
-        context.dataStore.data.map { it[remarkPromptSendersKey] ?: emptySet() }
-
-    suspend fun remarkPromptSendersOnce(): Set<String> = remarkPromptSenders.first()
-
     /** Whether a new payment no category matched gets a reply-to-name notification. On by default. */
     val askUncategorised: Flow<Boolean> = context.dataStore.data.map { it[askUncategorisedKey] ?: true }
 
@@ -160,11 +155,23 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[askUncategorisedKey] = enabled }
     }
 
-    suspend fun setRemarkPrompt(senderKey: String, enabled: Boolean) {
+    /**
+     * Packages whose notifications are read, or null when the list was never set (an
+     * install from before the list existed; the repository seeds it once).
+     *
+     * An allowlist, not every app: a notification from an app not on it is dropped before
+     * it is stored, so a chat that mentions "Rs 500" never reaches the database.
+     */
+    val notificationApps: Flow<Set<String>?> = context.dataStore.data.map { it[notificationAppsKey] }
+
+    suspend fun setNotificationApps(packages: Set<String>) {
+        context.dataStore.edit { it[notificationAppsKey] = packages }
+    }
+
+    suspend fun setNotificationApp(packageName: String, enabled: Boolean) {
         context.dataStore.edit { prefs ->
-            val current = prefs[remarkPromptSendersKey] ?: emptySet()
-            prefs[remarkPromptSendersKey] =
-                if (enabled) current + senderKey else current - senderKey
+            val current = prefs[notificationAppsKey] ?: emptySet()
+            prefs[notificationAppsKey] = if (enabled) current + packageName else current - packageName
         }
     }
 

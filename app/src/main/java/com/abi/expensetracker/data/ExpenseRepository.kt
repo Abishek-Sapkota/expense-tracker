@@ -31,6 +31,7 @@ import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 
@@ -136,19 +137,29 @@ class ExpenseRepository(
     }
 
     /** [sender] is a raw sender id; it is normalised here so every circle variant maps. */
-    fun observeBankApps(): Flow<List<BankApp>> = db.bankAppDao().observeAll()
+    /** Account resolution for display and prompts; app names come from the package manager. */
+    fun resolver(banks: List<Bank>, links: List<SenderLink>): BankResolver =
+        BankResolver(banks, links) { pkg -> appLabel(context, pkg) }
+
+    /** The apps whose notifications are read; see [SettingsStore.notificationApps]. */
+    fun observeNotificationApps(): Flow<Set<String>> =
+        settings.notificationApps.map { it ?: seedNotificationApps() }
+
+    suspend fun notificationAppsOnce(): Set<String> =
+        settings.notificationApps.first() ?: seedNotificationApps()
+
+    suspend fun setNotificationApp(packageName: String, enabled: Boolean) =
+        settings.setNotificationApp(packageName, enabled)
 
     /**
-     * Claims an app's notifications for [bank]. A bank with no icon yet takes the app's,
-     * since that icon is how the user recognises the account.
+     * The first read on an install from before the app list: every app some account
+     * already claimed under the old per-account chips (the [BankApp] table, kept only for
+     * this and for old backups), so updating does not silently stop reading Gmail.
      */
-    suspend fun addBankApp(bank: Bank, packageName: String) = withContext(Dispatchers.IO) {
-        db.bankAppDao().insert(BankApp(packageName, bank.id))
-        if (bank.icon == null) db.bankDao().update(bank.copy(icon = AppIconRef.of(packageName)))
-    }
-
-    suspend fun removeBankApp(bank: Bank, packageName: String) = withContext(Dispatchers.IO) {
-        db.bankAppDao().delete(packageName, bank.id)
+    private suspend fun seedNotificationApps(): Set<String> = withContext(Dispatchers.IO) {
+        val seeded = db.bankAppDao().all().map { it.packageName }.toSet()
+        settings.setNotificationApps(seeded)
+        seeded
     }
 
     suspend fun linkSender(sender: String, bankId: Long) = withContext(Dispatchers.IO) {
@@ -301,10 +312,9 @@ class ExpenseRepository(
         // cap of a few hundred pushed every real bank message out of the list.
         db.rawMessageDao().observeUnparsed(5_000),
         db.bankDao().observeAll(),
-        db.senderLinkDao().observeAll(),
-        db.bankAppDao().observeAll()
-    ) { messages, banks, links, apps ->
-        val resolver = BankResolver(banks, links, apps)
+        db.senderLinkDao().observeAll()
+    ) { messages, banks, links ->
+        val resolver = resolver(banks, links)
         // Every unparsed money message, with its account when the sender is linked.
         messages.mapNotNull { m ->
             if (!NotificationIngest.looksLikeTransaction(m.body)) return@mapNotNull null
@@ -601,18 +611,14 @@ class ExpenseRepository(
      */
     private suspend fun askWhatFor(parsed: List<Txn>, senderById: Map<String, String>) {
         if (parsed.isEmpty()) return
-        val optedIn = settings.remarkPromptSendersOnce()
         val askUncategorised = settings.askUncategorised.first()
-        if (optedIn.isEmpty() && !askUncategorised) return
+        if (!askUncategorised) return
 
-        val banks = db.bankDao().all()
-        val links = db.senderLinkDao().all()
-        val resolver = BankResolver(banks, links, db.bankAppDao().all())
+        val resolver = resolver(db.bankDao().all(), db.senderLinkDao().all())
 
         parsed.forEach { txn ->
             val sender = senderById[txn.id] ?: return@forEach
-            val key = SenderNormalizer.normalize(sender)
-            if (!RemarkPromptPolicy.shouldAsk(txn, key, optedIn, askUncategorised)) return@forEach
+            if (!RemarkPromptPolicy.shouldAsk(txn, askUncategorised)) return@forEach
 
             RemarkPrompt.ask(context, txn, resolver.bankFor(sender)?.name)
         }

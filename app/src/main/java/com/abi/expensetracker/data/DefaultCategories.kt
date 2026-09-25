@@ -29,10 +29,17 @@ object DefaultCategories {
                 "tootle,bus,transport"
         ),
         Category(
-            name = "Dining & tea",
+            name = "Dining",
+            icon = "🍽️",
+            keywords = "restaurant,khaja,momo,bakery,foodmandu,food,hotel,kitchen"
+        ),
+        // Its own bucket because a daily chiya or coffee is a habit worth seeing apart
+        // from meals. No bare "tea": matching is substring, and it would catch "team" and
+        // "steak".
+        Category(
+            name = "Hot drinks & coffee",
             icon = "☕",
-            keywords = "restaurant,cafe,coffee,java,khaja,momo,bakery,foodmandu,food," +
-                "hotel,kitchen,chiya"
+            keywords = "chiya,coffee,cafe,java,latte,espresso,cappuccino,milk tea"
         ),
         Category(
             name = "Utilities & internet",

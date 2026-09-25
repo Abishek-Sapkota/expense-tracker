@@ -322,15 +322,14 @@ fun SectionHeader(
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
+        // Plain muted text, not a pill: nearly every section carries a count, and a pill
+        // on each one made every header compete with the content under it.
         if (trailing != null) {
-            Surface(shape = ChipShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                Text(
-                    trailing,
-                    style = MaterialTheme.typography.labelMedium.merge(LocalTabularStyle.current),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-                )
-            }
+            Text(
+                trailing,
+                style = MaterialTheme.typography.labelMedium.merge(LocalTabularStyle.current),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -449,15 +448,11 @@ fun GroupedRow(
 }
 
 /**
- * The row icon, with the direction of the money on it.
+ * The row icon: the account's own icon, or an initial.
  *
- * The circle is tinted red for money out and green for money in — the convention every
- * reader already has — and carries a small arrow badge so the direction survives a
- * red-green colour deficiency, a greyscale screenshot and a dimmed screen. Colour alone
- * would be a guess; the arrow makes it a reading.
- *
- * The glyph inside stays the category's, because what a row was for is the thing that is
- * actually hard to recall a week later.
+ * No direction badge on it: the amount beside it already says which way the money went
+ * with its sign as well as its colour, so a red-green colour deficiency still reads it,
+ * and a third marker for the same fact was clutter on every row.
  */
 @Composable
 fun DirectionalMonogram(
@@ -467,37 +462,15 @@ fun DirectionalMonogram(
     glyph: String? = null
 ) {
     val finance = AppTheme.finance
-    val accent = if (isCredit) finance.credit else finance.debit
-
-    Box(modifier.size(44.dp), contentAlignment = Alignment.Center) {
-        Monogram(
-            text = text,
-            modifier = Modifier.align(Alignment.TopStart),
-            // Money in wears the credit tint; money out stays neutral, so a page of
-            // ordinary spending reads calm and an inflow stands out.
-            container = if (isCredit) finance.creditSurface else MaterialTheme.colorScheme.surfaceContainerHigh,
-            content = if (isCredit) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-            glyph = glyph
-        )
-        Box(
-            Modifier
-                .align(Alignment.BottomEnd)
-                .size(18.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerLowest)
-                .padding(1.5.dp)
-                .clip(CircleShape)
-                .background(accent),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                if (isCredit) Icons.Filled.ArrowUpward else Icons.Filled.ArrowDownward,
-                contentDescription = if (isCredit) "Money in" else "Money out",
-                tint = Color.White,
-                modifier = Modifier.size(11.dp)
-            )
-        }
-    }
+    Monogram(
+        text = text,
+        modifier = modifier,
+        // Money in wears the credit tint; money out stays neutral, so a page of
+        // ordinary spending reads calm and an inflow stands out.
+        container = if (isCredit) finance.creditSurface else MaterialTheme.colorScheme.surfaceContainerHigh,
+        content = if (isCredit) finance.credit else MaterialTheme.colorScheme.onSurfaceVariant,
+        glyph = glyph
+    )
 }
 
 /**

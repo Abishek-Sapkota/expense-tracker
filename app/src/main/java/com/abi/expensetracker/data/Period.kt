@@ -10,19 +10,30 @@ data class DateRange(val startMillis: Long, val endMillis: Long)
  * "Last week" and "last month" are deliberately rolling windows of 7 and 30 days ending
  * today, not calendar weeks or months. On the 2nd of a month a calendar "last month"
  * would report two days of spending, which reads as a bug to anyone glancing at it.
+ *
+ * "This month" is the calendar month the user reads (Nepali or Gregorian), so the ledger
+ * can show the same total Trends does for the current month.
  */
 enum class Period(val label: String) {
     TODAY("Today"),
     YESTERDAY("Yesterday"),
     LAST_7_DAYS("Last 7 days"),
+    THIS_MONTH("This month"),
     LAST_30_DAYS("Last 30 days"),
     CUSTOM("Custom");
 
-    fun range(zone: ZoneId = ZoneId.systemDefault(), today: LocalDate = LocalDate.now(zone)): DateRange =
+    fun range(
+        zone: ZoneId = ZoneId.systemDefault(),
+        today: LocalDate = LocalDate.now(zone),
+        nepali: Boolean = false
+    ): DateRange =
         when (this) {
             TODAY -> rangeOfDays(today, today, zone)
             YESTERDAY -> rangeOfDays(today.minusDays(1), today.minusDays(1), zone)
             LAST_7_DAYS -> rangeOfDays(today.minusDays(6), today, zone)
+            THIS_MONTH -> MonthWindow.of(today, nepali).let {
+                rangeOfDays(it.firstDay, it.firstDay.plusDays(it.dayCount - 1L), zone)
+            }
             LAST_30_DAYS -> rangeOfDays(today.minusDays(29), today, zone)
             // Meaningless without user-chosen dates; the caller supplies those instead.
             CUSTOM -> rangeOfDays(today, today, zone)

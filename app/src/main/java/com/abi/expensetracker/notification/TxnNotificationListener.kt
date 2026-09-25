@@ -64,7 +64,12 @@ class TxnNotificationListener : NotificationListenerService() {
         )
 
         val repository = ServiceLocator.repository(applicationContext)
-        scope.launch { repository.ingest(listOf(message)) }
+        scope.launch {
+            // Only apps the user picked in Accounts. Checked after the cheap text filter,
+            // so the settings read happens for money-looking notifications alone.
+            if (sbn.packageName !in repository.notificationAppsOnce()) return@launch
+            repository.ingest(listOf(message))
+        }
     }
 
     override fun onDestroy() {

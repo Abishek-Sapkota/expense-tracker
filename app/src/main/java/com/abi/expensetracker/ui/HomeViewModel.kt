@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.abi.expensetracker.data.BankResolver
 import com.abi.expensetracker.data.DateRange
+import com.abi.expensetracker.data.MonthWindow
 import com.abi.expensetracker.data.Money
 import com.abi.expensetracker.data.SplitSummary
 import com.abi.expensetracker.data.Splits
@@ -53,18 +54,22 @@ data class TxnRow(
 data class PeriodSelection(
     val period: Period = Period.TODAY,
     val customStart: LocalDate? = null,
-    val customEnd: LocalDate? = null
+    val customEnd: LocalDate? = null,
+    /** Which calendar "This month" means; filled in from the setting, not by the chips. */
+    val nepali: Boolean = false
 ) {
     val range: DateRange
         get() = if (period == Period.CUSTOM && customStart != null && customEnd != null) {
             Period.rangeOfDays(customStart, customEnd)
         } else {
-            period.range()
+            period.range(nepali = nepali)
         }
 
     val label: String
         get() = if (period == Period.CUSTOM && customStart != null && customEnd != null) {
             "$customStart to $customEnd"
+        } else if (period == Period.THIS_MONTH) {
+            MonthWindow.of(LocalDate.now(), nepali).label
         } else {
             period.label
         }
@@ -77,13 +82,14 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private val settings = SettingsStore(app)
 
     private val _selection = MutableStateFlow(PeriodSelection())
-    val selection: StateFlow<PeriodSelection> = _selection.asStateFlow()
+    val selection: StateFlow<PeriodSelection> =
+        combine(_selection, settings.useNepaliCalendar) { sel, nepali -> sel.copy(nepali = nepali) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, PeriodSelection())
 
     private val resolver = combine(
         repository.observeBanks(),
-        repository.observeSenderLinks(),
-        repository.observeBankApps()
-    ) { banks, links, apps -> BankResolver(banks, links, apps) }
+        repository.observeSenderLinks()
+    ) { banks, links -> repository.resolver(banks, links) }
 
     val categories: StateFlow<List<Category>> = repository.observeCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -106,7 +112,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val rows: StateFlow<List<TxnRow>> = combine(
-        combine(_selection, _category) { sel, cat -> sel to cat }.flatMapLatest { (sel, cat) ->
+        combine(selection, _category) { sel, cat -> sel to cat }.flatMapLatest { (sel, cat) ->
             if (cat != null) repository.observeCategoryDebits(cat.first, cat.second)
             else repository.observeBetween(sel.range)
         },
@@ -134,16 +140,16 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Reports folded as duplicates in the selected period, for the ledger's chip. */
-    val duplicateCount: StateFlow<Int> = _selection
+    val duplicateCount: StateFlow<Int> = selection
         .flatMapLatest { repository.observeDuplicates(it.range) }
         .map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
-    val spentMinor: StateFlow<Long> = _selection
+    val spentMinor: StateFlow<Long> = selection
         .flatMapLatest { repository.observeSpentBetween(it.range) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0L)
 
-    val receivedMinor: StateFlow<Long> = _selection
+    val receivedMinor: StateFlow<Long> = selection
         .flatMapLatest { repository.observeReceivedBetween(it.range) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0L)
 

@@ -189,10 +189,6 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     /** Sends the user back through the first-run guide on the next frame. */
     fun rerunSetupGuide() = viewModelScope.launch { settings.setOnboardingDone(false) }
 
-    val askUncategorised: StateFlow<Boolean> = settings.askUncategorised
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
-
-    fun setAskUncategorised(enabled: Boolean) = viewModelScope.launch { settings.setAskUncategorised(enabled) }
 
     fun clearStatus() { _status.value = null }
 

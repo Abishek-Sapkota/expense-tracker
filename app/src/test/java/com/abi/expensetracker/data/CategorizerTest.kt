@@ -11,7 +11,7 @@ class CategorizerTest {
 
     private val groceries = Category(1, "Groceries & supplies", "🛒", "bhatbhateni,mart,kirana")
     private val fuel = Category(2, "Transport & fuel", "⛽", "petrol,pump,nepal oil,oil")
-    private val dining = Category(3, "Dining & tea", "☕", "cafe,coffee,khaja")
+    private val dining = Category(3, "Dining", "☕", "cafe,coffee,khaja")
 
     private val categorizer = Categorizer(listOf(groceries, fuel, dining))
 

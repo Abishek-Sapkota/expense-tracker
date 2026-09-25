@@ -13,20 +13,11 @@ import com.abi.expensetracker.data.model.Txn
 object RemarkPromptPolicy {
 
     /**
-     * Two reasons to ask, for spending only (nobody annotates their salary):
-     * - the sender is opted in and the message did not say what the money was for, or
-     * - [askUncategorised] is on and no category's keywords matched, so the answer is what
-     *   will file it: "coffee" lands in the coffee category.
+     * Asks about spending only (nobody annotates their salary), and only when no
+     * category's keywords matched: the answer is what will file it, so "coffee" lands in
+     * the coffee category. One switch for every account; a payment the keywords already
+     * filed has nothing to ask about.
      */
-    fun shouldAsk(
-        txn: Txn,
-        senderKey: String,
-        optedInSenders: Set<String>,
-        askUncategorised: Boolean = false
-    ): Boolean {
-        if (txn.direction != Direction.DEBIT) return false
-        val optedIn = senderKey in optedInSenders && txn.remark.isNullOrBlank()
-        val uncategorised = askUncategorised && txn.categoryId == null
-        return optedIn || uncategorised
-    }
+    fun shouldAsk(txn: Txn, askUncategorised: Boolean): Boolean =
+        askUncategorised && txn.direction == Direction.DEBIT && txn.categoryId == null
 }

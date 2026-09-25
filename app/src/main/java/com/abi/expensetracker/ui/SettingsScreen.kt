@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.IntegrationInstructions
 import androidx.compose.material.icons.outlined.MarkChatRead
 import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
@@ -92,7 +93,6 @@ fun SettingsScreen(
     val categories by vm.categories.collectAsStateWithLifecycle()
     val useNepaliCalendar by vm.useNepaliCalendar.collectAsStateWithLifecycle()
     val neutralPalette by vm.neutralPalette.collectAsStateWithLifecycle()
-    val askUncategorised by vm.askUncategorised.collectAsStateWithLifecycle()
 
     /** Which sub-screen is open, or null for the menu itself. */
     var openSection by rememberSaveable { mutableStateOf<SettingsSection?>(null) }
@@ -128,6 +128,11 @@ fun SettingsScreen(
     // rather than nesting a scrolling list inside this scrolling column.
     if (section == SettingsSection.TEMPLATES) {
         TemplatesScreen(onBack = { openSection = null })
+        return
+    }
+    // Accounts is set up once and rarely touched, so it lives here rather than as a tab.
+    if (section == SettingsSection.ACCOUNTS) {
+        AccountsScreen(onBack = { openSection = null })
         return
     }
 
@@ -276,9 +281,7 @@ fun SettingsScreen(
                     onApplyKeywords = vm::applyKeywords,
                     busy = busy,
                     adding = addingCategory,
-                    onAddingChange = { addingCategory = it },
-                    askUncategorised = askUncategorised,
-                    onAskUncategorised = vm::setAskUncategorised
+                    onAddingChange = { addingCategory = it }
                 )
 
                 SettingsSection.APPEARANCE -> AppearanceControls(
@@ -338,7 +341,7 @@ fun SettingsScreen(
                     ) { Text("Reparse") }
                 }
 
-                SettingsSection.TEMPLATES -> Unit
+                SettingsSection.TEMPLATES, SettingsSection.ACCOUNTS -> Unit
                 SettingsSection.CALENDAR -> CalendarSetting(
                     useNepali = useNepaliCalendar,
                     onChange = vm::setUseNepaliCalendar
@@ -406,6 +409,7 @@ private enum class SettingsSection(val title: String, val summary: String) {
     SPENDING_LIMIT("Spending limit", "A daily or monthly cap on spending"),
     CATEGORIES("Categories & keywords", "The buckets spending falls into, and the words that sort it"),
     CALENDAR("Calendar", "Read dates on the English or the Nepali calendar"),
+    ACCOUNTS("Accounts", "Your banks and wallets, and which senders and apps are theirs"),
     PERMISSIONS("Permissions", "What the app is allowed to read"),
     MESSAGES("Messages & parsing", "Sync the inbox, rescan it, or rebuild transactions"),
     TEMPLATES("Parser templates", "Teach the app how your bank words its messages"),
@@ -479,7 +483,8 @@ private fun CalendarSetting(useNepali: Boolean, onChange: (Boolean) -> Unit) {
 private val SettingsSection.group: SettingsGroup
     get() = when (this) {
         SettingsSection.SPENDING_LIMIT, SettingsSection.CATEGORIES, SettingsSection.CALENDAR -> SettingsGroup.BUDGET
-        SettingsSection.PERMISSIONS, SettingsSection.MESSAGES, SettingsSection.TEMPLATES -> SettingsGroup.ENGINE
+        SettingsSection.ACCOUNTS, SettingsSection.PERMISSIONS, SettingsSection.MESSAGES,
+        SettingsSection.TEMPLATES -> SettingsGroup.ENGINE
         SettingsSection.APPEARANCE, SettingsSection.BACKUP -> SettingsGroup.SYSTEM
     }
 
@@ -488,6 +493,7 @@ private val SettingsSection.icon: ImageVector
         SettingsSection.SPENDING_LIMIT -> Icons.Outlined.AccountBalanceWallet
         SettingsSection.CATEGORIES -> Icons.AutoMirrored.Outlined.Label
         SettingsSection.CALENDAR -> Icons.Outlined.CalendarMonth
+        SettingsSection.ACCOUNTS -> Icons.Outlined.AccountBalance
         SettingsSection.PERMISSIONS -> Icons.Outlined.Security
         SettingsSection.MESSAGES -> Icons.Outlined.MarkChatRead
         SettingsSection.TEMPLATES -> Icons.Outlined.IntegrationInstructions
@@ -532,24 +538,19 @@ private fun SettingsMenuRow(section: SettingsSection, summary: String, onClick: 
  */
 @Composable
 private fun OfflineCard() {
-    Surface(
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+    // A quiet footnote rather than a card: it is reassurance, not a setting, and a card
+    // weighed the same as the sections above it.
+    Row(
+        Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Outlined.Lock, contentDescription = null, tint = AppTheme.finance.credit)
-                Text("100% offline & private", style = MaterialTheme.typography.titleMedium)
-            }
-            Text(
-                "This app declares no internet permission, so it cannot send anything " +
-                    "anywhere. Messages, transactions and backups stay on this phone, inside " +
-                    "Android's per-app sandbox.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Icon(Icons.Outlined.Lock, contentDescription = null, tint = AppTheme.finance.credit, modifier = Modifier.size(16.dp))
+        Text(
+            "Offline: no internet permission, so nothing leaves this phone.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

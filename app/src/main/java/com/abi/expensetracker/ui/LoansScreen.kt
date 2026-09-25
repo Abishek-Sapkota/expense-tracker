@@ -16,7 +16,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.foundation.horizontalScroll
-import kotlin.math.abs
 import com.abi.expensetracker.ui.components.StatusChip
 import com.abi.expensetracker.ui.components.AddFab
 import androidx.compose.foundation.layout.size
@@ -175,11 +174,11 @@ fun LoansScreen(vm: LoansViewModel = viewModel(), resetSignal: Int = 0) {
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.padding(bottom = 12.dp).horizontalScroll(rememberScrollState())
                         ) {
+                            // No counts: the summary card above already says how many
+                            // people are on each side.
                             LoanFilter.entries.forEach { f ->
-                                val count = if (f == LoanFilter.SPLITS) state.splits.size
-                                else state.people.count(f.matches)
                                 ChoicePill(
-                                    label = "${f.label} · $count",
+                                    label = f.label,
                                     selected = f == filter,
                                     onClick = { filter = f }
                                 )
@@ -194,8 +193,9 @@ fun LoansScreen(vm: LoansViewModel = viewModel(), resetSignal: Int = 0) {
                         trailing = when (filter) {
                             LoanFilter.OWED_TO_ME -> Money.format(shown.sumOf { it.balanceMinor })
                             LoanFilter.I_OWE -> Money.format(-shown.sumOf { it.balanceMinor })
-                            LoanFilter.ALL -> if (shown.isEmpty()) null
-                            else "${Money.format(abs(state.owedToMeMinor - state.iOweMinor))} net outstanding"
+                            // The net is the summary card's headline; saying it again here
+                            // was the third copy on one screen.
+                            LoanFilter.ALL -> null
                             LoanFilter.SPLITS -> state.splits.sumOf { it.pendingMinor }
                                 .takeIf { it > 0 }?.let { "${Money.format(it)} pending" }
                             else -> if (shown.isEmpty()) null else "${shown.size}"
@@ -459,8 +459,8 @@ private fun PersonRow(person: PersonLoans, nepaliDates: Boolean, position: Group
             Column(Modifier.weight(1f)) {
                 Text(person.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    "${person.entries.size} " + (if (person.entries.size == 1) "entry" else "entries") +
-                        " · " + relativeWhen(person.lastActivity, nepali = nepaliDates).substringBefore(","),
+                    // Just the last date: the entry count cut it off and is one tap away.
+                    relativeWhen(person.lastActivity, nepali = nepaliDates).substringBefore(","),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

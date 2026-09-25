@@ -180,6 +180,17 @@ fun HomeScreen(
                             }
                         }
                     },
+                    // Only when this period folded something: a permanent "Duplicates (0)"
+                    // took a whole row above the chips to say there was nothing to review.
+                    actions = {
+                        if (categoryView == null && duplicateCount > 0) {
+                            IconButton(onClick = { showDuplicates = true }) {
+                                BadgedBox(badge = { Badge { Text("$duplicateCount") } }) {
+                                    Icon(Icons.Outlined.ContentCopy, contentDescription = "Duplicates")
+                                }
+                            }
+                        }
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background
                     )
@@ -201,23 +212,6 @@ fun HomeScreen(
                     trailing = Money.format(categoryView.totalMinor),
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
-            }
-            if (categoryView == null) item {
-                Row(
-                    Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    AssistChip(
-                        onClick = { showDuplicates = true },
-                        label = { Text("Duplicates ($duplicateCount)") },
-                        leadingIcon = {
-                            Icon(Icons.Outlined.ContentCopy, contentDescription = null, Modifier.size(16.dp))
-                        },
-                        shape = ChipShape,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                    )
-                }
             }
             if (categoryView == null) item {
                 Box(Modifier.padding(bottom = 12.dp)) { PeriodChips(
@@ -281,14 +275,6 @@ fun HomeScreen(
                 }
             }
 
-            if (categoryView == null) item {
-                Box(Modifier.padding(bottom = 12.dp)) {
-                    SectionHeader(
-                        title = "Transactions",
-                        trailing = if (rows.isEmpty()) null else "${rows.size} " + if (rows.size == 1) "item" else "items"
-                    )
-                }
-            }
 
             if (rows.isEmpty()) {
                 item {
@@ -335,7 +321,8 @@ fun HomeScreen(
                 }
             }
 
-            item { Spacer(Modifier.height(24.dp)) }
+            // Tall enough that the last row scrolls clear of the Add button.
+            item { Spacer(Modifier.height(88.dp)) }
         }
     }
 
@@ -522,15 +509,18 @@ private fun TransactionTile(
         row.bankName != null -> row.bankName
         else -> "Unlinked sender"
     }
+    // Only rows that are something other than plain spending get a tag. "Parsed",
+    // "Edited" and "Manual" were on nearly every row and changed nothing the reader does.
     val statusLabel = when {
         row.loan?.splitId != null -> "Share"
         row.loan != null -> "Loan"
         row.split != null -> "Split"
-        row.isManual -> "Manual"
-        txn.userEdited -> "Edited"
         txn.needsReview -> "Review"
-        else -> "Parsed"
+        else -> null
     }
+    // A loan row with nothing typed on it is named by who it is with, not "Unknown".
+    val loanTitle = row.loan?.let { loanPhrase(it) }
+    val title = txn.merchant ?: txn.remark ?: loanTitle ?: row.categoryName ?: "Unknown"
 
     // The row is the whole affordance: tap to edit, hold to select for deleting. Buttons
     // would crowd a space that is already two lines of text and an amount.
@@ -545,7 +535,7 @@ private fun TransactionTile(
                 Surface(
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
@@ -557,7 +547,7 @@ private fun TransactionTile(
                 }
             } else {
                 DirectionalMonogram(
-                    text = txn.merchant ?: txn.remark ?: row.categoryName ?: "?",
+                    text = title,
                     isCredit = isCredit,
                     // The account's own icon (usually its app icon), else the initial.
                     glyph = row.bankIcon
@@ -568,8 +558,8 @@ private fun TransactionTile(
                 // The remark stands in as the title when the message named no merchant:
                 // "Khaja" says more about the row than "Unknown" ever does.
                 Text(
-                    // With no title at all, the category the user picked names the row.
-                    txn.merchant ?: txn.remark ?: row.categoryName ?: "Unknown",
+                    // With no title at all, the loan or the category names the row.
+                    title,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -588,7 +578,7 @@ private fun TransactionTile(
                     buildString {
                         append(source)
                         // Who the loan is with says more than the bank does once it is one.
-                        row.loan?.let { append(" · ${it.kind.label} · ${it.person}") }
+                        if (title != loanTitle) row.loan?.let { append(" · ${loanPhrase(it)}") }
                         row.split?.let {
                             append(if (it.isSettled) " · Split, all paid" else " · Split · ${Money.format(it.pendingMinor)} pending")
                         }
@@ -614,16 +604,9 @@ private fun TransactionTile(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1
                 )
-                // Rows that are something other than plain spending, or need a look,
-                // wear the debit tint; the rest stay neutral.
-                val flagged = statusLabel in setOf("Review", "Loan", "Split", "Share")
-                StatusChip(
-                    text = statusLabel,
-                    container = if (flagged) finance.debitSurface
-                    else MaterialTheme.colorScheme.surfaceContainerHigh,
-                    content = if (flagged) finance.debit
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                statusLabel?.let {
+                    StatusChip(text = it, container = finance.debitSurface, content = finance.debit)
+                }
             }
         }
     }
@@ -676,6 +659,14 @@ private fun DayHeader(day: LocalDate, rows: List<TxnRow>, nepaliDates: Boolean) 
             )
         }
     }
+}
+
+/** "Lent to Asha", "Borrowed from Asha": the loan read as a sentence. */
+private fun loanPhrase(loan: LoanEntry): String = when (loan.kind) {
+    LoanKind.LENT -> "Lent to ${loan.person}"
+    LoanKind.RECEIVED_BACK -> "Got back from ${loan.person}"
+    LoanKind.BORROWED -> "Borrowed from ${loan.person}"
+    LoanKind.PAID_BACK -> "Paid back to ${loan.person}"
 }
 
 /** Built once: a formatter per row per recomposition was measurable garbage while scrolling. */
@@ -821,15 +812,14 @@ private fun ExpenseDialog(
                     )
                 }
                 extras?.invoke()
-                sourceMessages.forEachIndexed { index, message ->
-                    SourceMessage(message, isCopy = index > 0)
-                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        CalendarDates.fullDateLabel(date, nepaliDates),
+                        // The year only when it is not this one, so the date fits one line.
+                        if (date.year == LocalDate.now().year) CalendarDates.dayLabel(date, nepaliDates)
+                        else CalendarDates.fullDateLabel(date, nepaliDates),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
@@ -838,12 +828,32 @@ private fun ExpenseDialog(
                         Text("Change date", style = MaterialTheme.typography.labelMedium)
                     }
                 }
-                note?.let {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                // Folded away: the bank's text is for checking a wrong amount, which is the
+                // rare edit, and it pushed the fields most edits touch into a scroll.
+                if (sourceMessages.isNotEmpty()) {
+                    var showMessages by remember { mutableStateOf(false) }
+                    TextButton(
+                        onClick = { showMessages = !showMessages },
+                        contentPadding = PaddingValues(horizontal = 0.dp)
+                    ) {
+                        Text(
+                            (if (showMessages) "Hide" else "Show") + " original message" +
+                                if (sourceMessages.size > 1) "s (${sourceMessages.size})" else "",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                    if (showMessages) {
+                        sourceMessages.forEachIndexed { index, message ->
+                            SourceMessage(message, isCopy = index > 0)
+                        }
+                        note?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         },
