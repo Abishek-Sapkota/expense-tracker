@@ -258,6 +258,12 @@ class SmsParserTest {
         SmsParser(rules).parse(message(body))
         assertTrue((System.nanoTime() - started) < 2_000_000_000L)
     }
+
+    @Test
+    fun `a time after "at" is not the merchant`() {
+        val txn = (parse("Rs 500.00 debited from A/C XX1234 on 20/09/2026 at 10:30 AM") as ParseOutcome.Parsed).txn
+        assertFalse(txn.merchant == "10")
+    }
 }
 
 class MoneyTest {
@@ -282,4 +288,16 @@ class MoneyTest {
         assertEquals("रु450.00", Money.format(45_000L))
     }
 
+
+    @Test
+    fun `refuses amounts that are not plainly an amount`() {
+        assertEquals(12_345_678L, Money.parseToMinor("1,23,456.78"))
+        assertEquals(12_345_678L, Money.parseToMinor("123,456.78"))
+        assertEquals(2_000L, Money.parseToMinor("20.0"))
+        assertNull(Money.parseToMinor("1e5"))
+        assertNull(Money.parseToMinor("1.234"))
+        assertNull(Money.parseToMinor("12,50"))
+        assertNull(Money.parseToMinor("."))
+        assertNull(Money.parseToMinor("-5"))
+    }
 }

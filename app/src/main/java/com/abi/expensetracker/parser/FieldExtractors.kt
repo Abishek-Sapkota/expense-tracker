@@ -41,7 +41,7 @@ object FieldExtractors {
     private val REMARK_SHORT = Regex("""(?i)\bre:\s*([^.;\n]{1,60})""")
 
     private val MERCHANT = Regex(
-        """(?i)\b(?:to|at|towards|in favour of|vpa)\s+([A-Za-z0-9][A-Za-z0-9@._&'\-]*(?:\s+[A-Za-z0-9@._&'\-]+){0,3})"""
+        """(?i)\b(?:to|at|towards|in favour of|vpa)\s+(?!\d{1,2}[:.]\d{2})([A-Za-z0-9][A-Za-z0-9@._&'\-]*(?:\s+[A-Za-z0-9@._&'\-]+){0,3})"""
     )
 
     /** Words that signal the merchant name has ended and the next clause has begun. */

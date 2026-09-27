@@ -16,17 +16,28 @@ object Money {
      * Returns null rather than guessing when the text is not a number.
      */
     fun parseToMinor(raw: String): Long? {
-        val cleaned = raw.replace(",", "").replace(" ", "").trim()
-        if (cleaned.isEmpty()) return null
+        val trimmed = raw.replace(" ", "").trim()
+        // Digits with optional grouping commas and at most two decimals, nothing else.
+        // BigDecimal alone took "1e5" as a lakh, rounded "1.234" without saying, and read
+        // a comma-decimal "12,50" as 1,250.
+        if (!PLAIN_AMOUNT.matches(trimmed)) return null
         return try {
-            BigDecimal(cleaned)
-                .setScale(2, RoundingMode.HALF_UP)
+            BigDecimal(trimmed.replace(",", ""))
+                .setScale(2, RoundingMode.UNNECESSARY)
                 .movePointRight(2)
-                .toLong()
-        } catch (e: NumberFormatException) {
+                .longValueExact()
+        } catch (e: ArithmeticException) {
+            // More than a Long of paise: not an amount anyone typed or a bank sent.
             null
         }
     }
+
+    /**
+     * Plain digits, or grouped as banks group them: lakh style "1,23,456" or western
+     * "123,456", so the last group is always three digits. "12,50" fits neither and is
+     * refused rather than guessed at.
+     */
+    private val PLAIN_AMOUNT = Regex("""(?:\d+|\d{1,3}(?:,\d{2,3})*,\d{3})(?:\.\d{1,2})?""")
 
     /**
      * Plain editable text, e.g. `1234.50`: no symbol, no grouping.

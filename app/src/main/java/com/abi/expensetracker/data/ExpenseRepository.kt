@@ -59,7 +59,7 @@ private const val HISTORY_DUPLICATE_WINDOW_MILLIS = 6 * 60 * 60 * 1000L
  * Bump when parsing or de-duplication logic changes, so the next start reparses stored
  * messages under the new logic instead of leaving history as the old code read it.
  */
-const val PARSER_VERSION = 3
+const val PARSER_VERSION = 4
 
 class ExpenseRepository(
     private val context: Context,
@@ -562,7 +562,9 @@ class ExpenseRepository(
         val pending = db.txnDao().uncategorized()
         if (pending.isEmpty()) return@withContext 0
         val updated = categorizer().apply(pending).filter { it.categoryId != null }
-        if (updated.isNotEmpty()) db.txnDao().insertAll(updated)
+        // Only the category column, and only if still empty: writing back the whole row
+        // read above undid any edit made in the meantime.
+        db.withTransaction { updated.forEach { db.txnDao().fillCategory(it.id, it.categoryId!!) } }
         updated.size
     }
 

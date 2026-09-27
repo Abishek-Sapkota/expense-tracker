@@ -904,7 +904,9 @@ private fun ExpenseDialog(
         confirmButton = {
             Button(
                 onClick = { onConfirm(amount, date, direction, remark, bankId) },
-                enabled = amount.isNotBlank(),
+                // Only an amount that will actually save: a bad one used to close the
+                // dialog with a status line, and everything else typed was lost.
+                enabled = Money.parseToMinor(amount)?.let { it > 0 } == true,
                 shape = PillShape
             ) { Text(confirmLabel) }
         },

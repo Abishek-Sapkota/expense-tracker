@@ -195,9 +195,16 @@ interface TxnDao {
     )
     fun observeLoanDebitsBetween(from: Long, to: Long): Flow<Long>
 
-    /** Rows with no category yet, for a re-run after the keyword lists change. */
-    @Query("SELECT * FROM transactions WHERE categoryId IS NULL")
+    /**
+     * Rows with no category yet, for a re-run after the keyword lists change. Not the
+     * user's own: "No category" picked by hand is an answer, and filing it again undid it.
+     */
+    @Query("SELECT * FROM transactions WHERE categoryId IS NULL AND userEdited = 0")
     suspend fun uncategorized(): List<Txn>
+
+    /** Sets a keyword category only where none has been set meanwhile. */
+    @Query("UPDATE transactions SET categoryId = :categoryId WHERE id = :id AND categoryId IS NULL")
+    suspend fun fillCategory(id: String, categoryId: Long)
 
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun byId(id: String): Txn?
