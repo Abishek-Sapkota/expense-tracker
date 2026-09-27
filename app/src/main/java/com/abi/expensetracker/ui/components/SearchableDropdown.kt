@@ -1,5 +1,7 @@
 package com.abi.expensetracker.ui.components
 
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
@@ -86,6 +88,10 @@ fun <T> SearchableDropdown(
     val focusManager = LocalFocusManager.current
     val taps = remember { MutableInteractionSource() }
     var fieldWidth by remember { mutableIntStateOf(0) }
+    /** Pixels between the field and the bottom of its window, as the popup placement sees it. */
+    var roomBelow by remember { mutableIntStateOf(0) }
+    val navBar = WindowInsets.navigationBars.getBottom(LocalDensity.current)
+    val placement = remember { BelowAnchor { roomBelow = it } }
     val scope = rememberCoroutineScope()
     /** When the field was last pressed; a tap on it must not count as "outside the list". */
     var fieldPressedAt by remember { mutableLongStateOf(0L) }
@@ -148,7 +154,7 @@ fun <T> SearchableDropdown(
 
         if (expanded) {
             Popup(
-                popupPositionProvider = BelowAnchor,
+                popupPositionProvider = placement,
                 onDismissRequest = {
                     // A tap outside closes it, except a tap on the field itself, which
                     // reaches the list as an outside touch too and would otherwise shut
@@ -178,8 +184,15 @@ fun <T> SearchableDropdown(
                     shadowElevation = 6.dp,
                     modifier = Modifier.width(with(LocalDensity.current) { fieldWidth.toDp() })
                 ) {
+                    // No taller than the screen below the field: a fixed 320dp ran off the
+                    // bottom of the screen and cut the last options. The keyboard, when up,
+                    // is allowed to cover it; the screen edge is not.
+                    val room = with(LocalDensity.current) { (roomBelow - navBar).toDp() - 16.dp }
                     Column(
-                        Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())
+                        Modifier.heightIn(
+                            max = if (roomBelow == 0) 320.dp else minOf(320.dp, room.coerceAtLeast(96.dp))
+                        )
+                            .verticalScroll(rememberScrollState())
                             .padding(vertical = 8.dp)
                     ) {
                         if (matches.isEmpty() && !offerCreate) {
@@ -219,12 +232,20 @@ fun <T> SearchableDropdown(
     }
 }
 
-/** Always directly under the field, left edges aligned: never flipped or shifted over it. */
-private object BelowAnchor : PopupPositionProvider {
+/**
+ * Always directly under the field, left edges aligned: never flipped or shifted over it.
+ * Reports the room left below the field, which only placement knows exactly (the window
+ * a dialog's field lives in is not the size the field itself can see), so the list can
+ * stop at the screen's edge.
+ */
+private class BelowAnchor(private val onRoom: (Int) -> Unit) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
         windowSize: IntSize,
         layoutDirection: LayoutDirection,
         popupContentSize: IntSize
-    ): IntOffset = IntOffset(anchorBounds.left, anchorBounds.bottom)
+    ): IntOffset {
+        onRoom(windowSize.height - anchorBounds.bottom)
+        return IntOffset(anchorBounds.left, anchorBounds.bottom)
+    }
 }
