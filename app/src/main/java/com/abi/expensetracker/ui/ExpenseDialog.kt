@@ -103,7 +103,8 @@ internal fun ExpenseDialog(
                 .fillMaxSize()
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                // The old dialog's side margins: at 16dp the boxes ran nearly edge to edge.
+                .padding(horizontal = 40.dp, vertical = 12.dp),
             contentAlignment = BiasAlignment(horizontalBias = 0f, verticalBias = verticalBias)
         ) {
             Surface(
