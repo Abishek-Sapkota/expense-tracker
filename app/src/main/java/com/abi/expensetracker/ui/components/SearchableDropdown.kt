@@ -175,13 +175,12 @@ fun <T> SearchableDropdown(
                         WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
                 )
             ) {
-                // Bordered in the accent: on the dialog's own surface colour the list had
-                // no edge and read as part of the form behind it.
+                // The form's own background, set apart only by an accent border: without
+                // one the list had no edge and read as part of the form behind it.
                 Surface(
                     shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                    shadowElevation = 6.dp,
                     modifier = Modifier.width(with(LocalDensity.current) { fieldWidth.toDp() })
                 ) {
                     // No taller than the screen below the field: a fixed 320dp ran off the
