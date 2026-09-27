@@ -62,7 +62,9 @@ convention listed here, update the matching line in the same change.
   `TemplateCompiler` (`{amount}` style templates to regex; `{date}`/`{time}` override the
   arrival timestamp via `DateParser`/`TimeParser` in `SmsParser.occurredAt`), `DefaultRules`.
 - `sms/` — `SmsInboxReader` (history backfill), `SmsReceiver` (live).
-- `notification/` — `TxnNotificationListener`, `NotificationIngest`, `RemarkPrompt` +
+- `notification/` — `TxnNotificationListener` (`ensureBound` on every process start and
+  `requestRebind` on disconnect, since the system can leave a granted listener unbound
+  after an update/kill; on connect it ingests what is still in the shade), `NotificationIngest`, `RemarkPrompt` +
   `RemarkReplyReceiver` (inline reply to add a remark). Asked per `RemarkPromptPolicy`: one
   app-wide setting `askUncategorised` (default on, switch in Accounts) for any new debit no
   category matched; the reply becomes the remark and is run through keywords. The listener

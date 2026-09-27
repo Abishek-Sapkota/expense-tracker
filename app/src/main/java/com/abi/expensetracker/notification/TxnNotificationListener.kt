@@ -1,6 +1,7 @@
 package com.abi.expensetracker.notification
 
 import android.app.Notification
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -33,24 +34,71 @@ class TxnNotificationListener : NotificationListenerService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
-        val notification = sbn.notification ?: return
+        val message = toMessage(sbn) ?: return
+        val repository = ServiceLocator.repository(applicationContext)
+        scope.launch {
+            // Only apps the user picked in Accounts. Checked after the cheap text filter,
+            // so the settings read happens for money-looking notifications alone.
+            if (!repository.readsNotificationsFrom(sbn.packageName)) return@launch
+            repository.ingest(listOf(message))
+        }
+    }
+
+    /**
+     * Books what is still in the shade when the system (re)binds the listener.
+     *
+     * While unbound the listener hears nothing, and a bank alert posted in that gap would
+     * otherwise be lost for good even though it is sitting right there. Anything already
+     * stored is dropped by the ingest duplicate guard before parsing, so a rebind neither
+     * books a row twice nor asks about it again.
+     */
+    override fun onListenerConnected() {
+        val active = try {
+            activeNotifications
+        } catch (e: SecurityException) {
+            // Access revoked between the bind and this call.
+            return
+        } ?: return
+        val repository = ServiceLocator.repository(applicationContext)
+        val candidates = active.mapNotNull { sbn -> toMessage(sbn)?.let { sbn.packageName to it } }
+        if (candidates.isEmpty()) return
+        scope.launch {
+            val messages = candidates
+                .filter { (pkg, _) -> repository.readsNotificationsFrom(pkg) }
+                .map { it.second }
+            if (messages.isNotEmpty()) repository.ingest(messages)
+        }
+    }
+
+    /**
+     * The system unbinds a listener when its process dies or the app is updated, and does
+     * not always bind it again: access stays granted in settings while nothing is heard.
+     * Asking for the rebind here covers the case where the system tells us.
+     */
+    override fun onListenerDisconnected() {
+        requestRebind(ComponentName(this, TxnNotificationListener::class.java))
+    }
+
+    /** The notification as a [RawMessage], or null when it is not worth keeping. */
+    private fun toMessage(sbn: StatusBarNotification): RawMessage? {
+        val notification = sbn.notification ?: return null
 
         // Our own notifications would be a feedback loop, and an ongoing one (a download,
         // a media player) is a live status rather than an event that happened once.
-        if (sbn.packageName == packageName) return
-        if (notification.flags and Notification.FLAG_ONGOING_EVENT != 0) return
+        if (sbn.packageName == packageName) return null
+        if (notification.flags and Notification.FLAG_ONGOING_EVENT != 0) return null
         // The group summary repeats what the individual notifications already said.
-        if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
+        if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return null
 
-        val extras = notification.extras ?: return
+        val extras = notification.extras ?: return null
         val body = NotificationIngest.composeBody(
             title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString(),
             text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString(),
             bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
         )
-        if (!NotificationIngest.looksFinancial(body)) return
+        if (!NotificationIngest.looksFinancial(body)) return null
 
-        val message = RawMessage(
+        return RawMessage(
             // Content-addressed rather than keyed on the post time: an app that updates or
             // re-posts the same notification would otherwise book the transaction twice.
             id = RawMessage.idForContent(sbn.packageName, body),
@@ -62,14 +110,6 @@ class TxnNotificationListener : NotificationListenerService() {
             source = Source.NOTIFICATION,
             importedAt = System.currentTimeMillis()
         )
-
-        val repository = ServiceLocator.repository(applicationContext)
-        scope.launch {
-            // Only apps the user picked in Accounts. Checked after the cheap text filter,
-            // so the settings read happens for money-looking notifications alone.
-            if (!repository.readsNotificationsFrom(sbn.packageName)) return@launch
-            repository.ingest(listOf(message))
-        }
     }
 
     override fun onDestroy() {
@@ -83,6 +123,23 @@ class TxnNotificationListener : NotificationListenerService() {
         fun isEnabled(context: Context): Boolean =
             NotificationManagerCompat.getEnabledListenerPackages(context)
                 .contains(context.packageName)
+
+        /**
+         * Asks the system to bind the listener if access is granted.
+         *
+         * Called on every process start: after an update or a process kill the system can
+         * leave a granted listener unbound, and then no notification reaches the app until
+         * the user toggles access off and on. A request for a listener that is already
+         * bound is ignored by the system, so this costs one binder call and no scan.
+         */
+        fun ensureBound(context: Context) {
+            if (!isEnabled(context)) return
+            try {
+                requestRebind(ComponentName(context, TxnNotificationListener::class.java))
+            } catch (e: SecurityException) {
+                // Access revoked in the meantime; nothing to bind.
+            }
+        }
 
         /**
          * The system screen where the access is granted. There is no runtime-permission

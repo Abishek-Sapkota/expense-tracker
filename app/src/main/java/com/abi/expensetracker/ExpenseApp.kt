@@ -4,6 +4,7 @@ import com.abi.expensetracker.data.SettingsStore
 import android.app.Application
 import com.abi.expensetracker.di.ServiceLocator
 import com.abi.expensetracker.notification.RemarkPrompt
+import com.abi.expensetracker.notification.TxnNotificationListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,6 +15,7 @@ class ExpenseApp : Application() {
     override fun onCreate() {
         super.onCreate()
         RemarkPrompt.ensureChannel(this)
+        TxnNotificationListener.ensureBound(this)
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             val repository = ServiceLocator.repository(this@ExpenseApp)
             // Cheap count checks: a fresh install needs its rules and categories.

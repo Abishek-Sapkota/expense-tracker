@@ -594,16 +594,16 @@ class ExpenseRepository(
             }
             db.rawMessageDao().insertAll(messages)
             val parser = SmsParser(db.ruleDao().enabled())
-            val bySender = mutableMapOf<String, String>()
+            val byTxn = mutableMapOf<String, RawMessage>()
             val parsed = messages.mapNotNull { message ->
                 val txn = (parser.parse(message) as? ParseOutcome.Parsed)?.txn
-                if (txn != null) bySender[txn.id] = message.sender
+                if (txn != null) byTxn[txn.id] = message
                 txn
             }
             val categorized = categorizer().apply(parsed)
-            val inserted = insertParsed(categorized.map { it to bySender.getValue(it.id) })
+            val inserted = insertParsed(categorized.map { it to byTxn.getValue(it.id).sender })
             // A copy is a transaction already asked about, or about to be.
-            if (prompt) askWhatFor(inserted, bySender)
+            if (prompt) askWhatFor(inserted, byTxn)
             inserted.size
         }
 
@@ -613,7 +613,7 @@ class ExpenseRepository(
      * The rules live in [RemarkPromptPolicy]; this only resolves the sender and the bank
      * name the notification shows.
      */
-    private suspend fun askWhatFor(parsed: List<Txn>, senderById: Map<String, String>) {
+    private suspend fun askWhatFor(parsed: List<Txn>, messageById: Map<String, RawMessage>) {
         if (parsed.isEmpty()) return
         val askUncategorised = settings.askUncategorised.first()
         if (!askUncategorised) return
@@ -621,10 +621,11 @@ class ExpenseRepository(
         val resolver = resolver(db.bankDao().all(), db.senderLinkDao().all())
 
         parsed.forEach { txn ->
-            val sender = senderById[txn.id] ?: return@forEach
+            val message = messageById[txn.id] ?: return@forEach
             if (!RemarkPromptPolicy.shouldAsk(txn, askUncategorised)) return@forEach
 
-            RemarkPrompt.ask(context, txn, resolver.bankFor(sender)?.name)
+            // The body too: a Gmail or Messages package names no bank, the email does.
+            RemarkPrompt.ask(context, txn, resolver.bankFor(message.sender, message.body)?.name)
         }
     }
 
