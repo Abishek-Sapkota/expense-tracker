@@ -109,7 +109,7 @@ convention listed here, update the matching line in the same change.
   named "Lent to X" etc., tap = edit, long-press = multi-select
   (selection top bar with Delete + confirm), period chips (incl. `THIS_MONTH` = calendar
   month on the user's calendar, matching Trends), hero card,
-  `ExpenseDialog` (shared add/edit dialog: amount, remark, direction, "Paid from" account
+  `ExpenseDialog` (in `ui/ExpenseDialog.kt` with `TxnLinkControls`/`SourceMessage`; shared add/edit dialog: amount, remark, direction, "Paid from" account
   dropdown for manual rows (row subtitle "Sanima · Added by you"), category dropdown with
   "Create …" for a typed name (`HomeViewModel.createCategory`: name as keyword, free colour),
   every source message (primary + cross-channel copies) with channel + sender, folded
