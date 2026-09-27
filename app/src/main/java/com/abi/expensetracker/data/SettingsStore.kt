@@ -29,6 +29,7 @@ class SettingsStore(private val context: Context) {
     private val customAccentKey = intPreferencesKey("customAccentArgb")
     private val askUncategorisedKey = booleanPreferencesKey("askUncategorised")
     private val notificationAppsKey = stringSetPreferencesKey("notificationApps")
+    private val readAppNotificationsKey = booleanPreferencesKey("readAppNotifications")
     private val nepaliCalendarKey = booleanPreferencesKey("useNepaliCalendar")
     private val parserVersionKey = intPreferencesKey("parserVersion")
     private val maintenanceStampKey = longPreferencesKey("maintenanceStamp")
@@ -163,6 +164,17 @@ class SettingsStore(private val context: Context) {
      * it is stored, so a chat that mentions "Rs 500" never reaches the database.
      */
     val notificationApps: Flow<Set<String>?> = context.dataStore.data.map { it[notificationAppsKey] }
+
+    /**
+     * The master switch over [notificationApps]. On by default, so an update keeps reading
+     * what it read before; off leaves the ledger to SMS alone without forgetting the list.
+     */
+    val readAppNotifications: Flow<Boolean> =
+        context.dataStore.data.map { it[readAppNotificationsKey] ?: true }
+
+    suspend fun setReadAppNotifications(enabled: Boolean) {
+        context.dataStore.edit { it[readAppNotificationsKey] = enabled }
+    }
 
     suspend fun setNotificationApps(packages: Set<String>) {
         context.dataStore.edit { it[notificationAppsKey] = packages }

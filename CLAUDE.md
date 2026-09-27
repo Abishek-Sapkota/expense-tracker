@@ -66,8 +66,9 @@ convention listed here, update the matching line in the same change.
   `RemarkReplyReceiver` (inline reply to add a remark). Asked per `RemarkPromptPolicy`: one
   app-wide setting `askUncategorised` (default on, switch in Accounts) for any new debit no
   category matched; the reply becomes the remark and is run through keywords. The listener
-  only stores notifications from `SettingsStore.notificationApps` (allowlist picked in
-  Accounts; seeded from `BankApp` on first read).
+  only stores notifications when `readAppNotifications` (default on) and the package is in
+  `SettingsStore.notificationApps` (allowlist picked in Accounts; seeded from `BankApp` on
+  first read).
 - `backup/` — `BackupManager`, `BackupSchema` (streaming JSON export/import).
 - `di/ServiceLocator.kt` — `repository(context)`, `backupManager(context)`.
 - `ui/Navigation.kt` — `Destination` enum = bottom bar tabs (HOME/Ledger, TRENDS, LOANS,
@@ -114,9 +115,10 @@ convention listed here, update the matching line in the same change.
   Monogram, banners), `SearchableDropdown` (generic filterable dropdown; nullable item
   for "none" row; optional `onCreate` row), `AppIcon`, `Permissions`.
 - `ui/AccountsScreen.kt` + VM — opened from Settings: banks in one card (⋮ menu: Change
-  icon, Delete account), app-wide "Notifications from" chips (+ App → `AppChooserDialog`,
-  seen apps first), linked SMS senders (search is SMS senders only), then the "Ask what it
-  was for" switch (+ Allow notifications offer).
+  icon, Delete account), one "Notifications" card (`NotificationsCard`: "Read app
+  notifications" switch revealing app chips + App → `AppChooserDialog` and an Allow access
+  hint; "Ask what it was for" switch + Allow notifications hint), then linked SMS senders
+  (search is SMS senders only).
 - `ui/TemplatesScreen.kt` — "Messages no rule could read" starters card
   (`observeUnparsedFromLinked`: unparsed, non-copy, non-deleted money messages that pass
   `NotificationIngest.looksLikeTransaction` (also bare amounts + success words), filter chips

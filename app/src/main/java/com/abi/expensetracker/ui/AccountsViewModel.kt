@@ -52,6 +52,13 @@ class AccountsViewModel(app: Application) : AndroidViewModel(app) {
         .map { it.sortedBy { pkg -> appLabel(getApplication(), pkg)?.lowercase() ?: pkg } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Whether app notifications are read at all; the app list applies only when on. */
+    val readAppNotifications: StateFlow<Boolean> = settings.readAppNotifications
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun setReadAppNotifications(enabled: Boolean) =
+        viewModelScope.launch { settings.setReadAppNotifications(enabled) }
+
     /** The one "ask what it was for" switch, for payments no category matched. */
     val askUncategorised: StateFlow<Boolean> = settings.askUncategorised
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)

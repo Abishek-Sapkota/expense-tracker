@@ -148,6 +148,10 @@ class ExpenseRepository(
     suspend fun notificationAppsOnce(): Set<String> =
         settings.notificationApps.first() ?: seedNotificationApps()
 
+    /** Whether a notification from [packageName] is stored: switch on and the app picked. */
+    suspend fun readsNotificationsFrom(packageName: String): Boolean =
+        settings.readAppNotifications.first() && packageName in notificationAppsOnce()
+
     suspend fun setNotificationApp(packageName: String, enabled: Boolean) =
         settings.setNotificationApp(packageName, enabled)
 

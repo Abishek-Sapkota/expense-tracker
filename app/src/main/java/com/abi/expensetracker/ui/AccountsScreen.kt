@@ -3,6 +3,7 @@ package com.abi.expensetracker.ui
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.abi.expensetracker.ui.components.SyncSmsControl
 import com.abi.expensetracker.ui.components.rememberPostNotificationsState
+import com.abi.expensetracker.ui.components.rememberNotificationAccessState
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.filled.Bolt
@@ -81,6 +82,7 @@ fun AccountsScreen(
     var addingReadApp by remember { mutableStateOf(false) }
     val readApps by vm.readApps.collectAsStateWithLifecycle()
     val askUncategorised by vm.askUncategorised.collectAsStateWithLifecycle()
+    val readAppNotifications by vm.readAppNotifications.collectAsStateWithLifecycle()
     val notificationApps by vm.notificationApps.collectAsStateWithLifecycle()
     val syncing by vm.syncing.collectAsStateWithLifecycle()
     val syncStatus by vm.syncStatus.collectAsStateWithLifecycle()
@@ -163,13 +165,17 @@ fun AccountsScreen(
 
             item {
                 Spacer(Modifier.height(4.dp))
-                SectionHeader(title = "Notifications from")
+                SectionHeader(title = "Notifications")
             }
             item {
-                ReadAppsCard(
+                NotificationsCard(
+                    readApps = readAppNotifications,
+                    onReadApps = vm::setReadAppNotifications,
                     apps = readApps,
-                    onAdd = { addingReadApp = true },
-                    onRemove = vm::removeReadApp
+                    onAddApp = { addingReadApp = true },
+                    onRemoveApp = vm::removeReadApp,
+                    askWhatFor = askUncategorised,
+                    onAskWhatFor = vm::setAskUncategorised
                 )
             }
 
@@ -235,11 +241,6 @@ fun AccountsScreen(
                     onLink = { bankId -> vm.link(entry.senderKey, bankId) },
                     onUnlink = { vm.unlink(entry.senderKey) }
                 )
-            }
-
-            item {
-                Spacer(Modifier.height(4.dp))
-                AskWhatForCard(askUncategorised, vm::setAskUncategorised)
             }
 
             item { Spacer(Modifier.height(88.dp)) }
@@ -537,101 +538,137 @@ private fun BankRow(
 }
 
 /**
- * The apps whose notifications are read, for every account at once.
+ * Everything to do with notifications in one card: which apps are read, and the prompt
+ * the app posts itself.
+ *
+ * Two switches rather than one because they are separate jobs: turning off the question
+ * must not stop Gmail's bank emails reaching the ledger. The app list sits under the
+ * switch it belongs to and is hidden while that is off, but kept, so switching back on
+ * restores it.
  *
  * App-wide rather than per account: which account a notification belongs to is read from
- * the app's name or the message itself, so tying an app to one account added nothing but
- * the same Gmail chip on every card.
+ * the app's name or the message itself, so tying an app to one account added nothing.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ReadAppsCard(apps: List<String>, onAdd: () -> Unit, onRemove: (String) -> Unit) {
+private fun NotificationsCard(
+    readApps: Boolean,
+    onReadApps: (Boolean) -> Unit,
+    apps: List<String>,
+    onAddApp: () -> Unit,
+    onRemoveApp: (String) -> Unit,
+    askWhatFor: Boolean,
+    onAskWhatFor: (Boolean) -> Unit
+) {
     val context = LocalContext.current
     LedgerCard {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (apps.isEmpty()) {
-                Text(
-                    "No app picked, so no notifications are read. Add Gmail, Messages or " +
-                        "your bank's app.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        SwitchRow(
+            title = "Read app notifications",
+            subtitle = "Bank emails and app alerts, from the apps you pick.",
+            checked = readApps,
+            onChange = onReadApps
+        )
+        if (readApps) {
+            // Without system access the listener never runs, so the list would do nothing.
+            val access = rememberNotificationAccessState()
+            if (!access.granted) {
+                PermissionHint("Notification access is off, so no app is read.", "Allow access", access.request)
             }
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            Column(
+                Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                apps.forEach { pkg ->
-                    val label = remember(pkg) { appLabel(context, pkg) ?: pkg }
-                    InputChip(
-                        selected = false,
-                        onClick = { onRemove(pkg) },
-                        label = { Text(label) },
-                        avatar = {
-                            Monogram(
-                                text = label,
-                                glyph = AppIconRef.of(pkg),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        },
-                        trailingIcon = {
-                            Icon(Icons.Filled.Close, contentDescription = "Stop reading $label", Modifier.size(16.dp))
-                        },
+                if (apps.isEmpty()) {
+                    Text(
+                        "No app picked yet. Add Gmail, Messages or your bank's app.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    apps.forEach { pkg ->
+                        val label = remember(pkg) { appLabel(context, pkg) ?: pkg }
+                        InputChip(
+                            selected = false,
+                            onClick = { onRemoveApp(pkg) },
+                            label = { Text(label) },
+                            avatar = {
+                                Monogram(
+                                    text = label,
+                                    glyph = AppIconRef.of(pkg),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            },
+                            trailingIcon = {
+                                Icon(Icons.Filled.Close, contentDescription = "Stop reading $label", Modifier.size(16.dp))
+                            },
+                            shape = ChipShape
+                        )
+                    }
+                    AssistChip(
+                        onClick = onAddApp,
+                        label = { Text("App") },
+                        leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, Modifier.size(16.dp)) },
                         shape = ChipShape
                     )
                 }
-                AssistChip(
-                    onClick = onAdd,
-                    label = { Text("App") },
-                    leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, Modifier.size(16.dp)) },
-                    shape = ChipShape
-                )
             }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+        // Only payments no category matched are asked about: the reply is what files them,
+        // and a payment the keywords already filed has nothing to ask.
+        SwitchRow(
+            title = "Ask what it was for",
+            subtitle = "When a payment matches no category, a notification asks. Your reply " +
+                "names it and files it by keywords.",
+            checked = askWhatFor,
+            onChange = onAskWhatFor
+        )
+        // The question is a notification, so without that permission it would never
+        // show; say so where the switch is instead of failing silently.
+        val post = rememberPostNotificationsState()
+        if (askWhatFor && !post.granted) {
+            PermissionHint("Notifications are off for this app, so nothing will be asked.", "Allow notifications", post.request)
         }
     }
 }
 
-/**
- * The one "ask what it was for" switch, for every account.
- *
- * Only payments no category matched are asked about: the reply is what files them, and a
- * payment the keywords already filed has nothing to ask.
- */
 @Composable
-private fun AskWhatForCard(enabled: Boolean, onChange: (Boolean) -> Unit) {
-    LedgerCard {
-        Row(
-            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("Ask what it was for", style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    "When a payment matches no category, a notification asks. Your reply " +
-                        "names it and files it by keywords.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(checked = enabled, onCheckedChange = onChange)
+private fun SwitchRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-        // The question is a notification, so without that permission it would never
-        // show; say so where the switch is instead of failing silently.
-        val post = rememberPostNotificationsState()
-        if (enabled && !post.granted) {
-            Row(
-                Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Notifications are off for this app, so nothing will be asked.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppTheme.finance.debit,
-                    modifier = Modifier.weight(1f)
-                )
-                TextButton(onClick = post.request) { Text("Allow notifications") }
-            }
-        }
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}
+
+@Composable
+private fun PermissionHint(text: String, action: String, onClick: () -> Unit) {
+    Row(
+        Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text,
+            style = MaterialTheme.typography.bodySmall,
+            color = AppTheme.finance.debit,
+            modifier = Modifier.weight(1f)
+        )
+        TextButton(onClick = onClick) { Text(action) }
     }
 }
 

@@ -67,7 +67,7 @@ class TxnNotificationListener : NotificationListenerService() {
         scope.launch {
             // Only apps the user picked in Accounts. Checked after the cheap text filter,
             // so the settings read happens for money-looking notifications alone.
-            if (sbn.packageName !in repository.notificationAppsOnce()) return@launch
+            if (!repository.readsNotificationsFrom(sbn.packageName)) return@launch
             repository.ingest(listOf(message))
         }
     }
