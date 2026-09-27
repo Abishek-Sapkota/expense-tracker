@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +26,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -115,21 +115,17 @@ internal fun SplitBillDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.verticalScroll(rememberScrollState())
             ) {
-                OutlinedTextField(
+                CompactTextField(
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("What for") },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.small,
+                    label = "What for",
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
+                CompactTextField(
                     value = adding,
                     onValueChange = { adding = it },
-                    label = { Text("Add a person") },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.small,
+                    placeholder = "Add a person",
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Words,
                         imeAction = ImeAction.Done
@@ -172,12 +168,10 @@ internal fun SplitBillDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(friend, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                         if (customMode) {
-                            OutlinedTextField(
+                            CompactTextField(
                                 value = custom[Splits.personKey(friend)].orEmpty(),
                                 onValueChange = { custom[Splits.personKey(friend)] = it },
                                 prefix = { Text(Money.RUPEE) },
-                                singleLine = true,
-                                shape = MaterialTheme.shapes.small,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 modifier = Modifier.width(140.dp)
                             )
@@ -297,14 +291,12 @@ internal fun SplitPaymentDialog(
                         }
                     }
                 }
-                OutlinedTextField(
+                CompactTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("Amount") },
+                    label = "Amount",
                     prefix = { Text(Money.RUPEE) },
-                    singleLine = true,
                     enabled = fixedAmountMinor == null,
-                    shape = MaterialTheme.shapes.small,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )

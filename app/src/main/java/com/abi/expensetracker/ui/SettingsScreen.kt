@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.compose.material3.Switch
 import androidx.fragment.app.FragmentActivity
 import com.abi.expensetracker.ui.theme.ChipShape
@@ -920,12 +921,10 @@ private fun SpendingLimitEditor(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                OutlinedTextField(
+                CompactTextField(
                     value = amount,
                     onValueChange = { amount = it },
                     prefix = { Text(Money.RUPEE, style = MaterialTheme.typography.titleLarge) },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.small,
                     textStyle = MaterialTheme.typography.headlineSmall,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()

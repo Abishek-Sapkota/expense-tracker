@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,7 +19,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -136,13 +136,11 @@ fun SortScreen(onBack: () -> Unit, nepaliDates: Boolean, vm: SortViewModel = vie
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = useKeyword, onCheckedChange = { useKeyword = it })
-                OutlinedTextField(
+                CompactTextField(
                     value = keyword,
                     onValueChange = { keyword = it; if (it.isBlank()) useKeyword = false },
-                    label = { Text("Also file future payments with") },
-                    singleLine = true,
+                    label = "Also file future payments with",
                     enabled = useKeyword,
-                    shape = MaterialTheme.shapes.small,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None),
                     modifier = Modifier.fillMaxWidth()
                 )

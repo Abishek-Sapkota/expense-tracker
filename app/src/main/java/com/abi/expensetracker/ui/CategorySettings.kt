@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.text.KeyboardOptions
 import com.abi.expensetracker.ui.theme.AppTheme
@@ -165,13 +166,11 @@ private fun CategoryEditorDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
+                CompactTextField(
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Name") },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.small,
+                    label = "Name",
                     modifier = Modifier.fillMaxWidth()
                 )
                 // The colour it wears in Trends' breakdown and daily bars.
@@ -191,12 +190,12 @@ private fun CategoryEditorDialog(
                         )
                     }
                 }
-                OutlinedTextField(
+                CompactTextField(
+                    singleLine = false,
                     value = keywords,
                     onValueChange = { keywords = it },
-                    label = { Text("Keywords, comma separated") },
-                    placeholder = { Text("biryani, momo, restaurant") },
-                    shape = MaterialTheme.shapes.small,
+                    label = "Keywords, comma separated",
+                    placeholder = "biryani, momo, restaurant",
                     minLines = 3,
                     modifier = Modifier.fillMaxWidth()
                 )

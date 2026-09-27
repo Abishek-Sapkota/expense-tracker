@@ -1,11 +1,11 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -303,13 +303,11 @@ fun AccountsScreen(
                         fallback = newBankName,
                         onClick = { pickingNewBankIcon = true }
                     )
-                    OutlinedTextField(
+                    CompactTextField(
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = newBankName,
                         onValueChange = { newBankName = it },
-                        label = { Text("Name, e.g. Nabil or eSewa") },
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.small,
+                        label = "Name, e.g. Nabil or eSewa",
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -388,14 +386,12 @@ private fun WalletIdsDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                OutlinedTextField(
+                CompactTextField(
                     value = text,
                     onValueChange = { text = it },
-                    label = { Text("IDs, comma separated") },
-                    placeholder = { Text("98XXXXXXXX") },
-                    singleLine = true,
+                    label = "IDs, comma separated",
+                    placeholder = "98XXXXXXXX",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -528,13 +524,11 @@ private fun AppIconPicker(selected: String?, onPick: (String?) -> Unit) {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
+        CompactTextField(
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             value = query,
             onValueChange = { query = it },
-            label = { Text("Search apps") },
-            singleLine = true,
-            shape = MaterialTheme.shapes.small,
+            placeholder = "Search apps",
             modifier = Modifier.fillMaxWidth()
         )
         when {
@@ -607,7 +601,15 @@ private fun BankRow(
             IconButton(onClick = { menuOpen = true }) {
                 Icon(Icons.Filled.MoreVert, contentDescription = "More for ${bank.name}")
             }
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenu(
+                expanded = menuOpen,
+                onDismissRequest = { menuOpen = false },
+                // Same look as every dropdown: the page's own surface, an accent border.
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                shadowElevation = 0.dp,
+                tonalElevation = 0.dp
+            ) {
                 DropdownMenuItem(
                     text = { Text("Change icon") },
                     onClick = { menuOpen = false; onPickIcon() }
@@ -855,13 +857,11 @@ private fun SenderSearchSheet(
             )
             // Right here, so a sender that has not been read yet is one tap away.
             SyncSmsControl(syncing = syncing, status = syncStatus, onSync = onSync)
-            OutlinedTextField(
+            CompactTextField(
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 value = query,
                 onValueChange = onQuery,
-                label = { Text("Search messages and senders") },
-                singleLine = true,
-                shape = MaterialTheme.shapes.small,
+                placeholder = "Search messages and senders",
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searching) {

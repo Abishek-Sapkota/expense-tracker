@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.text.KeyboardOptions
 import com.abi.expensetracker.data.SenderNormalizer
@@ -131,12 +132,12 @@ fun TemplatesScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        OutlinedTextField(
+                        CompactTextField(
+                            singleLine = false,
                             value = sample,
                             onValueChange = vm::onSampleChanged,
-                            label = { Text("Sample message from your bank") },
+                            label = "Sample message from your bank",
                             minLines = 2,
-                            shape = MaterialTheme.shapes.small,
                             textStyle = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -156,15 +157,15 @@ fun TemplatesScreen(
                                 templateField = TextFieldValue(template, TextRange(template.length))
                             }
                         }
-                        OutlinedTextField(
+                        CompactTextField(
+                            singleLine = false,
                             value = templateField,
                             onValueChange = {
                                 templateField = it
                                 if (it.text != template) vm.onTemplateChanged(it.text)
                             },
-                            label = { Text("Pattern match rule") },
+                            label = "Pattern match rule",
                             minLines = 2,
-                            shape = MaterialTheme.shapes.small,
                             // Tokens are tinted inline so the shape of the rule is visible
                             // at a glance without leaving the field.
                             visualTransformation = tokenTransformation,
@@ -218,14 +219,12 @@ fun TemplatesScreen(
 
                         PreviewCard(preview)
 
-                        OutlinedTextField(
+                        CompactTextField(
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                             value = name,
                             onValueChange = { name = it },
-                            label = { Text("Template name") },
-                            placeholder = { Text("e.g. Nabil card spend") },
-                            singleLine = true,
-                            shape = MaterialTheme.shapes.small,
+                            label = "Template name",
+                            placeholder = "e.g. Nabil card spend",
                             modifier = Modifier.fillMaxWidth()
                         )
 

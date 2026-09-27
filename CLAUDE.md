@@ -202,6 +202,11 @@ Tests: `app/src/test/java/com/abi/expensetracker/{data,parser,notification,ui}/`
   per-tab mockups `design/{ledger_home,trends_tab,loans_tab,accounts_tab,settings_tab}/`.
   Old designs live in `design/old_designs/`. Mockups contain decorative claims the app does
   not have (encryption, vault stats, search/avatar) — do not implement those.
+- Text boxes: always `CompactTextField` (~44dp, hint inside, optional caption above via
+  `label`, `singleLine = false` for multi-line, TextFieldValue overload), never Material's
+  `OutlinedTextField`. Pick-from-a-list: always `SearchableDropdown` (first tap lists, second
+  tap types; non-focusable popup under the field, behind the keyboard, capped at the screen
+  edge; form-coloured with an accent border). Action menus use the same colours and border.
 - Shared components: `LedgerCard` (white + 1dp hairline), `GroupedRow` (one hairline
   around the group, 68dp-inset dividers), `LedgerChip` (pill filter chip, accent + check
   when selected), `StatusChip` (uppercase tag), `SectionHeader` (title + plain muted trailing text, no pill), `AddFab` (the only Add button: bottom-right pill

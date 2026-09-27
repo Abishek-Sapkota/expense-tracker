@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.abi.expensetracker.ui.theme.ChipShape
@@ -57,7 +58,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
@@ -590,13 +590,11 @@ internal fun LoanEntryDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.verticalScroll(rememberScrollState())
             ) {
-                OutlinedTextField(
+                CompactTextField(
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                     value = person,
                     onValueChange = { person = it },
-                    label = { Text("Person") },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.small,
+                    label = "Person",
                     trailingIcon = {
                         IconButton(onClick = pickContact) {
                             Icon(Icons.Default.Person, contentDescription = "Pick from contacts")
@@ -631,14 +629,12 @@ internal fun LoanEntryDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                OutlinedTextField(
+                CompactTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("Amount") },
+                    label = "Amount",
                     prefix = { Text(Money.RUPEE) },
-                    singleLine = true,
                     enabled = !linked,
-                    shape = MaterialTheme.shapes.small,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -655,13 +651,11 @@ internal fun LoanEntryDialog(
                         }
                     }
                 }
-                OutlinedTextField(
+                CompactTextField(
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     value = note,
                     onValueChange = { note = it },
-                    label = { Text("Note") },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.small,
+                    label = "Note",
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (linked) {
