@@ -24,9 +24,20 @@ object TransferDetector {
             .filter { it.length >= 6 }
             .distinct()
 
-    fun isTransfer(txn: Txn, body: String?, walletIds: Collection<String>): Boolean {
-        if (txn.direction != Direction.DEBIT || txn.isManual || body == null) return false
-        // Whole numbers only: 9866550884 must not match inside 19866550884 or a longer ref.
-        return walletIds.any { id -> Regex("""(?<!\d)$id(?!\d)""").containsMatchIn(body) }
+    fun isTransfer(txn: Txn, body: String?, walletIds: Collection<String>): Boolean =
+        isTransfer(txn, body, matcherFor(walletIds))
+
+    /**
+     * One pattern for all the IDs, built once per batch: a reparse checks every stored
+     * debit, and building a regex per ID per message was most of that check's cost.
+     */
+    fun matcherFor(walletIds: Collection<String>): Regex? =
+        walletIds.takeIf { it.isNotEmpty() }
+            // Whole numbers only: 9866550884 must not match inside 19866550884 or a longer ref.
+            ?.let { ids -> Regex("""(?<!\d)(?:${ids.joinToString("|") { Regex.escape(it) }})(?!\d)""") }
+
+    fun isTransfer(txn: Txn, body: String?, matcher: Regex?): Boolean {
+        if (matcher == null || txn.direction != Direction.DEBIT || txn.isManual || body == null) return false
+        return matcher.containsMatchIn(body)
     }
 }

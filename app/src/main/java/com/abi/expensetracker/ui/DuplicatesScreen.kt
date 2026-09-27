@@ -135,7 +135,10 @@ fun DuplicatesScreen(onBack: () -> Unit, vm: DuplicatesViewModel = viewModel()) 
                 }
             } else {
                 items(rows, key = { it.rawId }) { row ->
+                    // Fades in and out and slides into place as the list changes.
+                    Box(Modifier.animateItem()) {
                     DuplicateCard(row, nepaliDates, onNotDuplicate = { vm.markNotDuplicate(row) })
+                    }
                 }
             }
 

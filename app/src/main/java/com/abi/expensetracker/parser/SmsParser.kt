@@ -24,19 +24,26 @@ class SmsParser(
     private val zone: ZoneId = ZoneId.systemDefault()
 ) {
 
-    private data class Compiled(val rule: Rule, val sender: Regex, val body: Regex)
+    private data class Compiled(val rule: Rule, val sender: Regex, val body: Regex, val userRule: Boolean)
 
     private val compiled: List<Compiled> = rules
         .sortedWith(compareBy({ it.priority }, { it.id }))
         .mapNotNull { rule ->
             try {
+                // A user template is rebuilt from its template text rather than the pattern
+                // stored with it, so one saved before free-text spans were bounded gets the
+                // bounds too: an unbounded one could backtrack for minutes on a long email.
+                val fromTemplate = rule.template?.takeIf { !rule.builtIn }
+                    ?.let { TemplateCompiler.compile(it) as? TemplateCompiler.Outcome.Ok }
+                    ?.regex
                 // Senders case-insensitively: a template scoped from the Templates screen
                 // stores the normalised (upper-case) sender, and "SanimaBank" or a
                 // notification package such as "com.f1soft.esewa" then never matched.
                 Compiled(
                     rule,
                     Regex(rule.senderPattern, RegexOption.IGNORE_CASE),
-                    Regex(rule.bodyPattern)
+                    Regex(fromTemplate ?: rule.bodyPattern),
+                    userRule = !rule.builtIn
                 )
             } catch (e: Exception) {
                 // A user-authored rule with bad regex must not take down parsing of
@@ -45,42 +52,18 @@ class SmsParser(
             }
         }
 
-    /**
-     * The match, or null when there is none or the rule took too long to decide.
-     *
-     * A user template can be written so that it backtracks for minutes on a long message
-     * it does not match, and it runs on every notification and across every stored message
-     * on a reparse. The text is handed over through a sequence that gives up after a
-     * deadline, so one such rule costs a few milliseconds instead of freezing ingest.
-     */
-    private fun findWithin(regex: Regex, body: String): MatchResult? = try {
-        regex.find(Deadline(body, System.nanoTime() + RULE_TIME_LIMIT_NANOS))
-    } catch (e: Deadline.Expired) {
-        null
-    }
-
-    private class Deadline(private val text: CharSequence, private val until: Long) : CharSequence {
-        class Expired : RuntimeException() {
-            override fun fillInStackTrace(): Throwable = this
-        }
-
-        private var reads = 0
-
-        override val length: Int get() = text.length
-        override fun get(index: Int): Char {
-            // The clock only every 1,024 reads: a reparse reads millions of characters.
-            if (++reads and 1023 == 0 && System.nanoTime() > until) throw Expired()
-            return text[index]
-        }
-        override fun subSequence(startIndex: Int, endIndex: Int): CharSequence =
-            text.subSequence(startIndex, endIndex)
-        override fun toString(): String = text.toString()
-    }
-
     fun parse(message: RawMessage): ParseOutcome {
         for (c in compiled) {
             if (!c.sender.containsMatchIn(message.sender)) continue
-            val match = findWithin(c.body, message.body) ?: continue
+            // User rules see the start of the message only. A transaction's facts are in
+            // its first lines, and a Gmail body runs to kilobytes of footer, where a
+            // template's free-text spans have the most room to backtrack. (A timeout
+            // cannot do this job: Android's regex engine copies the text before matching,
+            // so a watchdog on reading it never fires.)
+            val text = if (c.userRule && message.body.length > USER_RULE_MAX_CHARS) {
+                message.body.substring(0, USER_RULE_MAX_CHARS)
+            } else message.body
+            val match = c.body.find(text) ?: continue
 
             val amountMinor = match.namedOrNull("amount")
                 ?.let { Money.parseToMinor(it) }
@@ -156,8 +139,8 @@ class SmsParser(
     }
 
     private companion object {
-        /** Far above any sane rule on any real message, which match in microseconds. */
-        const val RULE_TIME_LIMIT_NANOS = 50_000_000L
+        /** Well past where any bank puts the amount, merchant and reference. */
+        const val USER_RULE_MAX_CHARS = 1_500
 
         /** Two years either side of the message. */
         const val MAX_DATE_DRIFT_MILLIS = 730L * 24 * 60 * 60 * 1000

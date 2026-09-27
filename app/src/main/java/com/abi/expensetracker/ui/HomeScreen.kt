@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -385,9 +386,14 @@ fun HomeScreen(
                 // unaffected.
                 days.forEach { (day, dayRows) ->
                     item(key = "day-$day") {
+                        // Fades in and out and slides into place as the list changes.
+                        Box(Modifier.animateItem()) {
                         DayHeader(day, dayRows, nepaliDates)
+                        }
                     }
                     itemsIndexed(dayRows, key = { _, row -> row.txn.id }) { index, row ->
+                        // Fades in and out and slides into place as the list changes.
+                        Box(Modifier.animateItem()) {
                     TransactionTile(
                         nepaliDates = nepaliDates,
                         row = row,
@@ -398,6 +404,7 @@ fun HomeScreen(
                         onClick = { if (selecting) toggle(row.txn.id) else editingId = row.txn.id },
                         onLongClick = { toggle(row.txn.id) }
                     )
+                        }
                     }
                 }
             }

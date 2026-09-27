@@ -1,5 +1,11 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedContent
 import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -85,27 +91,38 @@ fun SortScreen(onBack: () -> Unit, nepaliDates: Boolean, vm: SortViewModel = vie
             if (item == null) return@Column
 
             val txn = item.txn
-            LedgerCard {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        Money.format(txn.amountMinor),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = AppTheme.finance.debit
-                    )
-                    Text(
-                        txn.merchant ?: txn.remark ?: "No merchant or remark",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        listOfNotNull(item.bankName, relativeWhen(txn.occurredAt, nepali = nepaliDates))
-                            .joinToString(" · "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    // The remark in full when the title is the merchant: it is often the
-                    // only hint of what the money was for.
-                    if (txn.merchant != null && txn.remark != null) {
-                        Text(txn.remark, style = MaterialTheme.typography.bodySmall)
+            // The next payment slides in from the right as one is filed or skipped.
+            AnimatedContent(
+                targetState = item,
+                transitionSpec = {
+                    (fadeIn(tween(200)) + slideInHorizontally(tween(220)) { it / 6 }) togetherWith fadeOut(tween(100))
+                },
+                contentKey = { it.txn.id },
+                label = "payment card"
+            ) { item ->
+                val txn = item.txn
+                LedgerCard {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            Money.format(txn.amountMinor),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = AppTheme.finance.debit
+                        )
+                        Text(
+                            txn.merchant ?: txn.remark ?: "No merchant or remark",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            listOfNotNull(item.bankName, relativeWhen(txn.occurredAt, nepali = nepaliDates))
+                                .joinToString(" · "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        // The remark in full when the title is the merchant: it is often the
+                        // only hint of what the money was for.
+                        if (txn.merchant != null && txn.remark != null) {
+                            Text(txn.remark, style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
             }

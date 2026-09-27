@@ -166,9 +166,9 @@ class ExpenseRepository(
 
     private suspend fun refreshTransfers(): Int = DbWrites.lock.withLock {
         db.withTransaction {
-            val ids = ownWalletIds()
+            val wallets = TransferDetector.matcherFor(ownWalletIds())
             val (transfers, others) = db.txnDao().parsedDebits()
-                .partition { TransferDetector.isTransfer(it.txn, it.body, ids) }
+                .partition { TransferDetector.isTransfer(it.txn, it.body, wallets) }
             transfers.map { it.txn.id }.chunked(500).forEach { db.txnDao().setTransfer(it, true) }
             others.map { it.txn.id }.chunked(500).forEach { db.txnDao().setTransfer(it, false) }
             transfers.size
@@ -737,9 +737,9 @@ class ExpenseRepository(
             if (txn != null) byTxn[txn.id] = message
             txn
         }
-        val ids = ownWalletIds()
+        val wallets = TransferDetector.matcherFor(ownWalletIds())
         val categorized = categorizer().apply(parsed).map { txn ->
-            txn.copy(isTransfer = TransferDetector.isTransfer(txn, byTxn[txn.id]?.body, ids))
+            txn.copy(isTransfer = TransferDetector.isTransfer(txn, byTxn[txn.id]?.body, wallets))
         }
         return insertParsed(categorized.map { it to byTxn.getValue(it.id).sender }) to byTxn
     }
@@ -825,7 +825,7 @@ class ExpenseRepository(
         val parser = SmsParser(db.ruleDao().enabled())
         // Read once rather than per page: the category list does not change mid-reparse.
         val categorizing = categorizer()
-        val ownWallets = ownWalletIds()
+        val ownWallets = TransferDetector.matcherFor(ownWalletIds())
         // Only the derived rows. Manual entries have no message to rebuild them from.
         db.txnDao().deleteParsed()
         db.txnCopyDao().deleteOrphans()

@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.foundation.layout.Box
 import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -212,11 +213,14 @@ fun LoansScreen(vm: LoansViewModel = viewModel(), resetSignal: Int = 0) {
                         )
                     }
                     items(state.splits.size, key = { "split-" + state.splits[it].split.id }) { i ->
+                        // Fades in and out and slides into place as the list changes.
+                        Box(Modifier.animateItem()) {
                         SplitCard(
                             state.splits[i],
                             onCashPayment = { person -> cashPayment = state.splits[i] to person },
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
+                        }
                     }
                 } else if (state.people.isEmpty()) {
                     item {
@@ -230,7 +234,10 @@ fun LoansScreen(vm: LoansViewModel = viewModel(), resetSignal: Int = 0) {
                     item { EmptyCard(filter.emptyTitle, "Nothing in this view. Pick another filter above.") }
                 }
                 itemsIndexed(shown, key = { _, p -> p.name.lowercase() }) { index, p ->
+                    // Fades in and out and slides into place as the list changes.
+                    Box(Modifier.animateItem()) {
                     PersonRow(p, nepaliDates, GroupPosition.of(index, shown.size)) { openPerson = p.name }
+                    }
                 }
                 // All also lists the splits still waiting on someone, under their own header.
                 val openSplits = state.splits.filterNot { it.isSettled }
@@ -243,11 +250,14 @@ fun LoansScreen(vm: LoansViewModel = viewModel(), resetSignal: Int = 0) {
                         )
                     }
                     items(openSplits.size, key = { "open-split-" + openSplits[it].split.id }) { i ->
+                        // Fades in and out and slides into place as the list changes.
+                        Box(Modifier.animateItem()) {
                         SplitCard(
                             openSplits[i],
                             onCashPayment = { who -> cashPayment = openSplits[i] to who },
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
+                        }
                     }
                 }
             } else {
@@ -262,8 +272,11 @@ fun LoansScreen(vm: LoansViewModel = viewModel(), resetSignal: Int = 0) {
                     )
                 }
                 itemsIndexed(person.entries, key = { _, e -> e.id }) { index, entry ->
+                    // Fades in and out and slides into place as the list changes.
+                    Box(Modifier.animateItem()) {
                     EntryRow(entry, nepaliDates, GroupPosition.of(index, person.entries.size)) {
                         editing = entry
+                    }
                     }
                 }
             }

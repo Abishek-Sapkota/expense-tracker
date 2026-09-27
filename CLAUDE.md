@@ -79,7 +79,9 @@ convention listed here, update the matching line in the same change.
   midnight; every "Today"/"this month" range must follow it).
 - `parser/` — pure Kotlin: `SmsParser`, `FieldExtractors`, `Regexes`, `DateParser`,
   `TemplateCompiler` (`{amount}` style templates to regex; free-text spans bounded, leading
-  `{any}` dropped; `SmsParser` gives each rule 50 ms via a deadline CharSequence; `{date}`/`{time}` override the
+  `{any}` dropped; `SmsParser` recompiles user rules from their `template` text so old
+  unbounded patterns get the bounds, and user rules see the first 1,500 chars — no
+  timeout, since Android's regex copies the input so a watchdog CharSequence never fires; `{date}`/`{time}` override the
   arrival timestamp via `DateParser`/`TimeParser` in `SmsParser.occurredAt`), `DefaultRules`.
 - `sms/` — `SmsInboxReader` (history backfill), `SmsReceiver` (live).
 - `notification/` — `TxnNotificationListener` (`ensureBound` on every process start and
@@ -197,6 +199,9 @@ Tests: `app/src/test/java/com/abi/expensetracker/{data,parser,notification,ui}/`
   add per-start scans there; no polling loops (the ledger's date flow wakes at midnight).
 - Device DB for debugging (debug build): `adb exec-out run-as com.abi.expensetracker cat
   databases/expenses.db` (also `-wal`, `-shm`), then inspect with `sqlite3`.
+- Motion: subtle and short (≤ 250 ms). List rows use `Modifier.animateItem()`; content that
+  swaps uses `AnimatedContent` with a fade (plus a small slide for navigation). Nothing
+  animates on data refresh alone except fades.
 - Comments explain *why* (design reasoning), in full prose; match that density.
 - Design reference: `design/utilitarian_ledger/DESIGN.md` (colours/type/components) and the
   per-tab mockups `design/{ledger_home,trends_tab,loans_tab,accounts_tab,settings_tab}/`.

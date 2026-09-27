@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.foundation.layout.Box
 import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.text.KeyboardOptions
@@ -322,11 +323,14 @@ fun TemplatesScreen(
             }
 
             items(userRules, key = { it.id }) { rule ->
+                // Fades in and out and slides into place as the list changes.
+                Box(Modifier.animateItem()) {
                 UserRuleCard(
                     rule = rule,
                     onToggle = { vm.setEnabled(rule, it) },
                     onDelete = { vm.delete(rule) }
                 )
+                }
             }
 
             item {
@@ -340,6 +344,8 @@ fun TemplatesScreen(
             }
 
             items(builtInRules, key = { it.id }) { rule ->
+                // Fades in and out and slides into place as the list changes.
+                Box(Modifier.animateItem()) {
                 LedgerCard {
                     Row(
                         Modifier.padding(horizontal = 14.dp, vertical = 8.dp).fillMaxWidth(),
@@ -353,6 +359,7 @@ fun TemplatesScreen(
                         )
                         Switch(checked = rule.enabled, onCheckedChange = { vm.setEnabled(rule, it) })
                     }
+                }
                 }
             }
 

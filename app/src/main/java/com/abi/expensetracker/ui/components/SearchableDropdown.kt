@@ -1,5 +1,11 @@
 package com.abi.expensetracker.ui.components
 
+import androidx.compose.ui.Alignment
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.verticalScroll
@@ -177,6 +183,12 @@ fun <T> SearchableDropdown(
             ) {
                 // The form's own background, set apart only by an accent border: without
                 // one the list had no edge and read as part of the form behind it.
+                // Unfolds from the field rather than appearing all at once.
+                val shown = remember { MutableTransitionState(false) }.apply { targetState = true }
+                AnimatedVisibility(
+                    visibleState = shown,
+                    enter = fadeIn(tween(150)) + expandVertically(tween(180), expandFrom = Alignment.Top)
+                ) {
                 Surface(
                     shape = MaterialTheme.shapes.small,
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -225,6 +237,7 @@ fun <T> SearchableDropdown(
                             )
                         }
                     }
+                }
                 }
             }
         }

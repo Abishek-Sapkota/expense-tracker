@@ -1,5 +1,11 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.animation.core.animateFloatAsState
@@ -242,7 +248,12 @@ internal fun ExpenseDialog(
                             style = MaterialTheme.typography.labelMedium
                         )
                     }
-                    if (showMessages) {
+                    AnimatedVisibility(
+                        visible = showMessages,
+                        enter = fadeIn(tween(150)) + expandVertically(tween(200)),
+                        exit = fadeOut(tween(100)) + shrinkVertically(tween(180))
+                    ) {
+                      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         sourceMessages.forEachIndexed { index, message ->
                             SourceMessage(message, isCopy = index > 0)
                         }
@@ -253,6 +264,7 @@ internal fun ExpenseDialog(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    }
                     }
                 }
             }

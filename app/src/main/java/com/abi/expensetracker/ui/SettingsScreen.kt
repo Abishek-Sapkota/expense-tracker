@@ -1,5 +1,11 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedContent
 import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.compose.material3.Switch
 import androidx.fragment.app.FragmentActivity
@@ -184,207 +190,221 @@ fun SettingsScreen(
                 .verticalScroll(scroll),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            when (section) {
-                // The menu. One screen per subject rather than one long scroll: the
-                // things here are unrelated errands — a budget, a permission, a rescan —
-                // and stacking them meant scrolling past four of them to reach the fifth.
-                null -> {
-                    // Live one-line summaries, so the menu answers "what is set" without
-                    // opening anything.
-                    val summaryOf: (SettingsSection) -> String = { section ->
-                        when (section) {
-                            SettingsSection.SPENDING_LIMIT -> spendingLimit?.let { limit ->
-                                val window = if (limit.basis == LimitBasis.DAY) "Daily" else "Monthly"
-                                "$window limit of ${Money.format(limit.amountMinor)}" +
-                                    (limitStatus?.let { st ->
-                                        if (st.isOver) " · over" else " · ${Money.format(st.remainingMinor)} left"
-                                    } ?: "")
-                            } ?: "No limit set"
-                            SettingsSection.CATEGORIES -> "${categories.size} categories, keyword auto-filing on"
-                            SettingsSection.CALENDAR ->
-                                if (useNepaliCalendar) "Nepali (Bikram Sambat) with Gregorian" else "Gregorian"
-                            SettingsSection.PERMISSIONS -> listOf(
-                                if (sms.granted) "SMS access granted" else "SMS access off",
-                                if (notifications.granted) "Notification listener on" else "Notifications off"
-                            ).joinToString(" · ")
-                            SettingsSection.APPEARANCE ->
-                                "${themeMode.label} mode · ${neutralPalette.label} · Accent: " +
-                                    (if (usingCustomAccent) "Custom" else accentPreset?.label ?: "Terracotta")
-                            else -> section.summary
-                        }
-                    }
-                    SettingsGroup.entries.forEach { group ->
-                        Text(
-                            group.title,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 4.dp, top = 8.dp)
-                        )
-                        val sections = SettingsSection.entries.filter { it.group == group }
-                        LedgerCard {
-                            sections.forEachIndexed { index, entry ->
-                                SettingsMenuRow(entry, summaryOf(entry)) { openSection = entry }
-                                if (index < sections.lastIndex) {
-                                    HorizontalDivider(
-                                        Modifier.padding(start = 68.dp),
-                                        color = MaterialTheme.colorScheme.outlineVariant
-                                    )
+            // Opening a section slides it in from the right and back returns it; a
+            // cut between them made the menu and a section read as unrelated screens.
+            AnimatedContent(
+                targetState = section,
+                transitionSpec = {
+                    val forward = targetState != null
+                    (fadeIn(tween(200)) + slideInHorizontally(tween(220)) { if (forward) it / 8 else -it / 8 }) togetherWith
+                        fadeOut(tween(120))
+                },
+                label = "settings section"
+            ) { section ->
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    when (section) {
+                        // The menu. One screen per subject rather than one long scroll: the
+                        // things here are unrelated errands — a budget, a permission, a rescan —
+                        // and stacking them meant scrolling past four of them to reach the fifth.
+                        null -> {
+                            // Live one-line summaries, so the menu answers "what is set" without
+                            // opening anything.
+                            val summaryOf: (SettingsSection) -> String = { section ->
+                                when (section) {
+                                    SettingsSection.SPENDING_LIMIT -> spendingLimit?.let { limit ->
+                                        val window = if (limit.basis == LimitBasis.DAY) "Daily" else "Monthly"
+                                        "$window limit of ${Money.format(limit.amountMinor)}" +
+                                            (limitStatus?.let { st ->
+                                                if (st.isOver) " · over" else " · ${Money.format(st.remainingMinor)} left"
+                                            } ?: "")
+                                    } ?: "No limit set"
+                                    SettingsSection.CATEGORIES -> "${categories.size} categories, keyword auto-filing on"
+                                    SettingsSection.CALENDAR ->
+                                        if (useNepaliCalendar) "Nepali (Bikram Sambat) with Gregorian" else "Gregorian"
+                                    SettingsSection.PERMISSIONS -> listOf(
+                                        if (sms.granted) "SMS access granted" else "SMS access off",
+                                        if (notifications.granted) "Notification listener on" else "Notifications off"
+                                    ).joinToString(" · ")
+                                    SettingsSection.APPEARANCE ->
+                                        "${themeMode.label} mode · ${neutralPalette.label} · Accent: " +
+                                            (if (usingCustomAccent) "Custom" else accentPreset?.label ?: "Terracotta")
+                                    else -> section.summary
                                 }
                             }
+                            SettingsGroup.entries.forEach { group ->
+                                Text(
+                                    group.title,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+                                )
+                                val sections = SettingsSection.entries.filter { it.group == group }
+                                LedgerCard {
+                                    sections.forEachIndexed { index, entry ->
+                                        SettingsMenuRow(entry, summaryOf(entry)) { openSection = entry }
+                                        if (index < sections.lastIndex) {
+                                            HorizontalDivider(
+                                                Modifier.padding(start = 68.dp),
+                                                color = MaterialTheme.colorScheme.outlineVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            OfflineCard()
+                            TextButton(onClick = vm::rerunSetupGuide, modifier = Modifier.fillMaxWidth()) {
+                                Text("Run setup guide again")
+                            }
                         }
-                    }
-                    OfflineCard()
-                    TextButton(onClick = vm::rerunSetupGuide, modifier = Modifier.fillMaxWidth()) {
-                        Text("Run setup guide again")
-                    }
-                }
 
-                SettingsSection.PERMISSIONS -> {
-                    Text(
-                        "What the app is allowed to read. Turning one on now works exactly " +
-                            "as it would have at first launch \u2014 past messages are read too, " +
-                            "not just new ones.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    PermissionCard(
-                        title = "Read messages",
-                        body = "Bank SMS already on this phone become your ledger, going " +
-                            "back as far as your inbox does.",
-                        state = sms,
-                        actionLabel = "Allow messages"
-                    )
-                    PermissionCard(
-                        title = "Read notifications",
-                        body = "Banks and wallets that no longer send an SMS still post a " +
-                            "notification. Only ones naming an amount and a transaction are " +
-                            "kept; everything else is discarded as it arrives.",
-                        state = notifications,
-                        actionLabel = "Open settings",
-                        footnote = "Android has no popup for this one \u2014 it is a switch in a " +
-                            "system list."
-                    )
-                    PermissionCard(
-                        title = "Ask what a payment was for",
-                        body = "Right after a payment, a notification asks what it was on. " +
-                            "Reply in the shade and the ledger names the row. It asks for any " +
-                            "payment no category matches, and for senders you pick under " +
-                            "Linked senders on the Accounts tab.",
-                        state = postNotifications,
-                        actionLabel = "Allow notifications"
-                    )
-                }
+                        SettingsSection.PERMISSIONS -> {
+                            Text(
+                                "What the app is allowed to read. Turning one on now works exactly " +
+                                    "as it would have at first launch \u2014 past messages are read too, " +
+                                    "not just new ones.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            PermissionCard(
+                                title = "Read messages",
+                                body = "Bank SMS already on this phone become your ledger, going " +
+                                    "back as far as your inbox does.",
+                                state = sms,
+                                actionLabel = "Allow messages"
+                            )
+                            PermissionCard(
+                                title = "Read notifications",
+                                body = "Banks and wallets that no longer send an SMS still post a " +
+                                    "notification. Only ones naming an amount and a transaction are " +
+                                    "kept; everything else is discarded as it arrives.",
+                                state = notifications,
+                                actionLabel = "Open settings",
+                                footnote = "Android has no popup for this one \u2014 it is a switch in a " +
+                                    "system list."
+                            )
+                            PermissionCard(
+                                title = "Ask what a payment was for",
+                                body = "Right after a payment, a notification asks what it was on. " +
+                                    "Reply in the shade and the ledger names the row. It asks for any " +
+                                    "payment no category matches, and for senders you pick under " +
+                                    "Linked senders on the Accounts tab.",
+                                state = postNotifications,
+                                actionLabel = "Allow notifications"
+                            )
+                        }
 
-                SettingsSection.SPENDING_LIMIT -> SpendingLimitEditor(
-                    limit = spendingLimit,
-                    status = limitStatus,
-                    nepali = useNepaliCalendar,
-                    onSave = { amount, basis -> vm.setSpendingLimit(amount, basis) },
-                    onClear = { vm.clearSpendingLimit() }
-                )
-
-                SettingsSection.CATEGORIES -> CategorySettings(
-                    categories = categories,
-                    onAdd = vm::addCategory,
-                    onUpdate = vm::updateCategory,
-                    onDelete = vm::deleteCategory,
-                    onApplyKeywords = vm::applyKeywords,
-                    busy = busy,
-                    adding = addingCategory,
-                    onAddingChange = { addingCategory = it }
-                )
-
-                SettingsSection.APPEARANCE -> AppearanceControls(
-                    themeMode = themeMode,
-                    onThemeMode = vm::setThemeMode,
-                    preset = accentPreset,
-                    customArgb = customAccentArgb,
-                    usingCustom = usingCustomAccent,
-                    onPreset = vm::setAccent,
-                    onCustom = vm::setCustomAccent,
-                    neutrals = neutralPalette,
-                    onNeutrals = vm::setNeutralPalette
-                )
-
-                SettingsSection.MESSAGES -> {
-                    Text(
-                        "Sync reads messages that arrived since the last run. Full rescan " +
-                            "re-reads the whole inbox; it is safe to repeat and will not " +
-                            "duplicate anything.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { vm.backfill(fromScratch = false) },
-                            enabled = sms.granted && !busy,
-                            shape = PillShape
-                        ) { Text("Sync SMS") }
-                        OutlinedButton(
-                            onClick = { vm.backfill(fromScratch = true) },
-                            enabled = sms.granted && !busy,
-                            shape = PillShape
-                        ) { Text("Full rescan") }
-                    }
-                    if (!sms.granted) {
-                        Text(
-                            "Reading messages is off. Turn it on under Permissions first.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        SettingsSection.SPENDING_LIMIT -> SpendingLimitEditor(
+                            limit = spendingLimit,
+                            status = limitStatus,
+                            nepali = useNepaliCalendar,
+                            onSave = { amount, basis -> vm.setSpendingLimit(amount, basis) },
+                            onClear = { vm.clearSpendingLimit() }
                         )
-                    }
 
-                    HorizontalDivider()
+                        SettingsSection.CATEGORIES -> CategorySettings(
+                            categories = categories,
+                            onAdd = vm::addCategory,
+                            onUpdate = vm::updateCategory,
+                            onDelete = vm::deleteCategory,
+                            onApplyKeywords = vm::applyKeywords,
+                            busy = busy,
+                            adding = addingCategory,
+                            onAddingChange = { addingCategory = it }
+                        )
 
-                    // Parsing lives here rather than on its own screen: reading messages
-                    // and turning them into transactions are two halves of one job, and
-                    // the reparse button is the thing you reach for right after a sync.
-                    Text(
-                        "Reparse rebuilds transactions from the messages already stored, " +
-                            "using the current templates. Expenses you added by hand are " +
-                            "untouched.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    OutlinedButton(
-                        onClick = vm::reparse,
-                        enabled = !busy,
-                        shape = PillShape
-                    ) { Text("Reparse") }
-                }
+                        SettingsSection.APPEARANCE -> AppearanceControls(
+                            themeMode = themeMode,
+                            onThemeMode = vm::setThemeMode,
+                            preset = accentPreset,
+                            customArgb = customAccentArgb,
+                            usingCustom = usingCustomAccent,
+                            onPreset = vm::setAccent,
+                            onCustom = vm::setCustomAccent,
+                            neutrals = neutralPalette,
+                            onNeutrals = vm::setNeutralPalette
+                        )
 
-                SettingsSection.TEMPLATES, SettingsSection.ACCOUNTS -> Unit
-                SettingsSection.CALENDAR -> CalendarSetting(
-                    useNepali = useNepaliCalendar,
-                    onChange = vm::setUseNepaliCalendar
-                )
+                        SettingsSection.MESSAGES -> {
+                            Text(
+                                "Sync reads messages that arrived since the last run. Full rescan " +
+                                    "re-reads the whole inbox; it is safe to repeat and will not " +
+                                    "duplicate anything.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = { vm.backfill(fromScratch = false) },
+                                    enabled = sms.granted && !busy,
+                                    shape = PillShape
+                                ) { Text("Sync SMS") }
+                                OutlinedButton(
+                                    onClick = { vm.backfill(fromScratch = true) },
+                                    enabled = sms.granted && !busy,
+                                    shape = PillShape
+                                ) { Text("Full rescan") }
+                            }
+                            if (!sms.granted) {
+                                Text(
+                                    "Reading messages is off. Turn it on under Permissions first.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
 
-                SettingsSection.APP_LOCK -> AppLockControls(
-                    enabled = appLock,
-                    onChange = vm::setAppLock
-                )
-                SettingsSection.BACKUP -> {
-                    AutoBackupCard(
-                        state = autoBackup,
-                        busy = busy,
-                        onChooseFolder = { folderLauncher.launch(null) },
-                        onBackupNow = vm::backupNow,
-                        onTurnOff = vm::turnOffAutoBackup
-                    )
-                    Text(
-                        "Everything is written to one JSON file: messages, transactions, " +
-                            "templates, banks and sender links.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { exportLauncher.launch("expenses-$today.json") },
-                            enabled = !busy,
-                            shape = PillShape
-                        ) { Text("Export") }
-                        OutlinedButton(
-                            onClick = { importLauncher.launch(arrayOf("application/json")) },
-                            enabled = !busy,
-                            shape = PillShape
-                        ) { Text("Import") }
+                            HorizontalDivider()
+
+                            // Parsing lives here rather than on its own screen: reading messages
+                            // and turning them into transactions are two halves of one job, and
+                            // the reparse button is the thing you reach for right after a sync.
+                            Text(
+                                "Reparse rebuilds transactions from the messages already stored, " +
+                                    "using the current templates. Expenses you added by hand are " +
+                                    "untouched.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            OutlinedButton(
+                                onClick = vm::reparse,
+                                enabled = !busy,
+                                shape = PillShape
+                            ) { Text("Reparse") }
+                        }
+
+                        SettingsSection.TEMPLATES, SettingsSection.ACCOUNTS -> Unit
+                        SettingsSection.CALENDAR -> CalendarSetting(
+                            useNepali = useNepaliCalendar,
+                            onChange = vm::setUseNepaliCalendar
+                        )
+
+                        SettingsSection.APP_LOCK -> AppLockControls(
+                            enabled = appLock,
+                            onChange = vm::setAppLock
+                        )
+                        SettingsSection.BACKUP -> {
+                            AutoBackupCard(
+                                state = autoBackup,
+                                busy = busy,
+                                onChooseFolder = { folderLauncher.launch(null) },
+                                onBackupNow = vm::backupNow,
+                                onTurnOff = vm::turnOffAutoBackup
+                            )
+                            Text(
+                                "Everything is written to one JSON file: messages, transactions, " +
+                                    "templates, banks and sender links.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = { exportLauncher.launch("expenses-$today.json") },
+                                    enabled = !busy,
+                                    shape = PillShape
+                                ) { Text("Export") }
+                                OutlinedButton(
+                                    onClick = { importLauncher.launch(arrayOf("application/json")) },
+                                    enabled = !busy,
+                                    shape = PillShape
+                                ) { Text("Import") }
+                            }
+                        }
                     }
                 }
             }

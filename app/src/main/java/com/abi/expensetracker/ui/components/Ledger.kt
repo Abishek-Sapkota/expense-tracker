@@ -1,5 +1,10 @@
 package com.abi.expensetracker.ui.components
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.material.icons.filled.SouthWest
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -97,11 +102,19 @@ fun PeriodHeroCard(
                 color = muted
             )
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    Money.format(spentMinor),
-                    style = MaterialTheme.typography.displayMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                // A quick cross-fade when the total changes (a new payment, another period),
+                // so the number reads as updated rather than swapped.
+                AnimatedContent(
+                    targetState = spentMinor,
+                    transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(120)) },
+                    label = "spent total"
+                ) { amount ->
+                    Text(
+                        Money.format(amount),
+                        style = MaterialTheme.typography.displayMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 Text(
                     " spent",
                     style = MaterialTheme.typography.bodyMedium,

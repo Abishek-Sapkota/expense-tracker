@@ -1,5 +1,7 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Animatable
 import com.abi.expensetracker.ui.theme.PillShape
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.setValue
@@ -337,7 +339,7 @@ private fun DailySpendCard(state: TrendsState, window: com.abi.expensetracker.da
                 )
             }
 
-            SpendBars(state.daily, state.busiestDay?.day, Modifier.fillMaxWidth().height(150.dp))
+            SpendBars(state.daily, state.busiestDay?.day, Modifier.fillMaxWidth().height(150.dp), growKey = window.firstDay)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 // Every fifth day labelled; thirty labels would not fit and say no more.
                 listOf(1, 5, 10, 15, 20, 25, state.daily.size).distinct().forEach { d ->
@@ -383,7 +385,15 @@ private fun DailySpendCard(state: TrendsState, window: com.abi.expensetracker.da
  * steady trickle.
  */
 @Composable
-private fun SpendBars(daily: List<DailySpend>, busiestDay: Int?, modifier: Modifier = Modifier) {
+private fun SpendBars(
+    daily: List<DailySpend>,
+    busiestDay: Int?,
+    modifier: Modifier = Modifier,
+    /** The month shown: the bars grow in when it changes, not on every new transaction. */
+    growKey: Any? = null
+) {
+    val grow = remember(growKey) { Animatable(0f) }
+    LaunchedEffect(growKey) { grow.animateTo(1f, tween(durationMillis = 450)) }
     val guide = MaterialTheme.colorScheme.outlineVariant
     val empty = MaterialTheme.colorScheme.surfaceContainerHigh
     val peak = daily.maxOfOrNull { it.amountMinor } ?: 0L
@@ -404,7 +414,7 @@ private fun SpendBars(daily: List<DailySpend>, busiestDay: Int?, modifier: Modif
                 return@forEachIndexed
             }
             // Stacked by category, biggest at the bottom, in each category's colour.
-            val barHeight = point.amountMinor.toFloat() / peak * size.height
+            val barHeight = point.amountMinor.toFloat() / peak * size.height * grow.value
             val sum = point.segments.sumOf { it.second }.toFloat()
             var bottom = size.height
             point.segments.forEach { (argb, amount) ->

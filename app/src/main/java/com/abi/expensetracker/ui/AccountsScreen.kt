@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.foundation.layout.Box
 import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
@@ -259,12 +260,15 @@ fun AccountsScreen(
             }
 
             items(linkedSenders, key = { it.senderKey }) { entry ->
+                // Fades in and out and slides into place as the list changes.
+                Box(Modifier.animateItem()) {
                 SenderCard(
                     entry = entry,
                     banks = banks,
                     onLink = { bankId -> vm.link(entry.senderKey, bankId) },
                     onUnlink = { vm.unlink(entry.senderKey) }
                 )
+                }
             }
 
             item { Spacer(Modifier.height(88.dp)) }
