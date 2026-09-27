@@ -76,10 +76,6 @@ interface RawMessageDao {
     @Query("SELECT * FROM raw_messages WHERE id = :id")
     suspend fun byId(id: String): RawMessage?
 
-    /** Message texts naming [name], for suggesting a wallet's own ID. */
-    @Query("SELECT body FROM raw_messages WHERE body LIKE '%' || :name || '%'")
-    suspend fun bodiesMentioning(name: String): List<String>
-
     /**
      * Newest messages that produced nothing: no transaction, not folded in as a duplicate,
      * not deleted by the user. The template screen offers the financial ones from linked

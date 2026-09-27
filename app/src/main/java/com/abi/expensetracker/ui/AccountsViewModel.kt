@@ -183,8 +183,6 @@ class AccountsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteBank(bankId: Long) = viewModelScope.launch { repository.deleteBank(bankId) }
 
-    suspend fun suggestWalletIds(bank: Bank): List<Pair<String, Int>> = repository.suggestWalletIds(bank)
-
     /** The outcome of the last wallet-ID change, shown under the accounts. */
     private val _walletStatus = MutableStateFlow<String?>(null)
     val walletStatus: StateFlow<String?> = _walletStatus.asStateFlow()

@@ -42,14 +42,4 @@ class TransferDetectorTest {
     fun `parses what the user typed`() {
         assertEquals(listOf("9866550884", "9812345678"), TransferDetector.parseIds(" 986-655-0884, 9812345678,12 "))
     }
-
-    @Test
-    fun `suggests the ID printed most often next to the wallet name`() {
-        val bodies = listOf(
-            "Your  Esewa Wallet Load for 9866550884 of 20.00 is successful",
-            "Payment successful to eSewa with amount 5.00 and remarks MOS/eSewa/9866550884/x",
-            "Your  Esewa Wallet Load for 9823083036 of 20.00 is successful"
-        )
-        assertEquals("9866550884" to 2, TransferDetector.suggestIds("Esewa", bodies).first())
-    }
 }

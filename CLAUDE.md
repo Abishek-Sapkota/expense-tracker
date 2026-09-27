@@ -158,7 +158,7 @@ convention listed here, update the matching line in the same change.
   Monogram, banners), `SearchableDropdown` (generic filterable dropdown; nullable item
   for "none" row; optional `onCreate` row), `AppIcon`, `Permissions`.
 - `ui/AccountsScreen.kt` + VM — opened from Settings: banks in one card (⋮ menu: Change
-  icon, Wallet IDs (`WalletIdsDialog`, suggests IDs seen in messages), Delete account), one "Notifications" card (`NotificationsCard`: "Read app
+  icon, Wallet IDs (`WalletIdsDialog`), Delete account), one "Notifications" card (`NotificationsCard`: "Read app
   notifications" switch revealing app chips + App → `AppChooserDialog` and an Allow access
   hint; "Ask what it was for" switch + Allow notifications hint), then linked SMS senders
   (search is SMS senders only).

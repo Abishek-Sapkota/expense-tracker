@@ -175,11 +175,6 @@ class ExpenseRepository(
         }
     }
 
-    /** IDs printed next to [bank]'s name in stored messages, most frequent first. */
-    suspend fun suggestWalletIds(bank: Bank): List<Pair<String, Int>> = withContext(Dispatchers.IO) {
-        TransferDetector.suggestIds(bank.name, db.rawMessageDao().bodiesMentioning(bank.name))
-    }
-
     fun observeTransfersBetween(range: DateRange): Flow<Long> =
         db.txnDao().observeTransfersBetween(range.startMillis, range.endMillis)
 

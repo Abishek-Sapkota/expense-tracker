@@ -29,14 +29,4 @@ object TransferDetector {
         // Whole numbers only: 9866550884 must not match inside 19866550884 or a longer ref.
         return walletIds.any { id -> Regex("""(?<!\d)$id(?!\d)""").containsMatchIn(body) }
     }
-
-    /** Wallet IDs the bank printed next to this wallet's name, most frequent first. */
-    fun suggestIds(walletName: String, bodies: List<String>): List<Pair<String, Int>> {
-        val name = Regex.escape(walletName.trim())
-        val pattern = Regex("""(?i)(?:$name\s+wallet\s+load\s+for\s+|MOS/$name/)(\d{6,15})""")
-        return bodies.flatMap { body -> pattern.findAll(body).map { it.groupValues[1] }.toList() }
-            .groupingBy { it }.eachCount()
-            .entries.sortedByDescending { it.value }
-            .map { it.key to it.value }
-    }
 }

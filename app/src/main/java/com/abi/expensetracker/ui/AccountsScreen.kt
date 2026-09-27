@@ -10,7 +10,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.produceState
-import com.abi.expensetracker.data.TransferDetector
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.abi.expensetracker.ui.components.SyncSmsControl
@@ -356,12 +355,8 @@ fun AccountsScreen(
     }
 
     walletIdsFor?.let { bank ->
-        val suggestions by produceState(emptyList<Pair<String, Int>>(), bank.id) {
-            value = vm.suggestWalletIds(bank)
-        }
         WalletIdsDialog(
             bank = bank,
-            suggestions = suggestions,
             onDismiss = { walletIdsFor = null },
             onSave = { vm.setWalletIds(bank, it); walletIdsFor = null }
         )
@@ -370,19 +365,15 @@ fun AccountsScreen(
 
 /**
  * The user's own IDs on a wallet, so a bank debit that loads one counts as moving money
- * rather than spending it. Suggests the IDs the bank printed next to this wallet's name,
- * most frequent first: the user's own number is nearly always the top one.
+ * rather than spending it.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun WalletIdsDialog(
     bank: Bank,
-    suggestions: List<Pair<String, Int>>,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit
 ) {
     var text by rememberSaveable(bank.id) { mutableStateOf(bank.walletIds.orEmpty()) }
-    val entered = TransferDetector.parseIds(text)
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.extraLarge,
@@ -407,22 +398,6 @@ private fun WalletIdsDialog(
                     shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth()
                 )
-                val offered = suggestions.filter { it.first !in entered }.take(4)
-                if (offered.isNotEmpty()) {
-                    Text(
-                        "Seen in your bank messages",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        offered.forEach { (id, count) ->
-                            SuggestionChip(
-                                onClick = { text = (entered + id).joinToString(", ") },
-                                label = { Text("$id · ${count}×") }
-                            )
-                        }
-                    }
-                }
             }
         },
         confirmButton = {
