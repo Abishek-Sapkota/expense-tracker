@@ -1,5 +1,19 @@
 package com.abi.expensetracker.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import kotlinx.coroutines.delay
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Add
@@ -37,7 +51,7 @@ import androidx.compose.ui.unit.dp
  * nullable [T] lets a caller offer an "any"/"none" row as a real item rather than as a
  * special case inside here.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun <T> SearchableDropdown(
     selectedLabel: String,
@@ -53,77 +67,124 @@ fun <T> SearchableDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
+    // A tap opens the whole list as a menu, with no keyboard: the keyboard used to come
+    // up with it and cover half the rows. Typing is a second, deliberate step from the
+    // search icon, and then the matches show inline under the field instead of in a
+    // popup, inside the dialog or page that already scrolls above the keyboard. (The
+    // menu popup takes keyboard focus unless its field was tapped as editable, so typing
+    // into it from the icon never reached the field.)
+    var searching by remember { mutableStateOf(false) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(searching) { if (searching) focus.requestFocus() }
+    // The dialog shrinks to the space above the keyboard, so the matches under the field
+    // start out of sight; scroll them into view as the keyboard opens and as they change.
+    val results = remember { BringIntoViewRequester() }
 
     val matches = remember(items, query) {
         val text = query.trim()
         if (text.isEmpty()) items
         else items.filter { itemLabel(it).contains(text, ignoreCase = true) }
     }
+    val typed = query.trim()
+    val offerCreate = onCreate != null && typed.isNotEmpty() &&
+        items.none { itemLabel(it).equals(typed, ignoreCase = true) }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = {
-            if (!enabled) return@ExposedDropdownMenuBox
-            expanded = it
-            // Every open starts from the whole list: a filter left over from last time
-            // reads as a list that has lost rows.
-            if (it) query = ""
-        },
-        modifier = modifier
-    ) {
-        OutlinedTextField(
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            // Closed, it states the choice; open, it is the search box. One control, so
-            // there is no moment where the thing under your finger changes meaning.
-            value = if (expanded) query else selectedLabel,
-            onValueChange = { query = it; expanded = true },
-            enabled = enabled,
-            singleLine = true,
-            shape = MaterialTheme.shapes.small,
-            placeholder = { Text(placeholder) },
-            leadingIcon = if (expanded) {
-                { Icon(Icons.Default.Search, contentDescription = null) }
-            } else null,
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryEditable, enabled)
-                .fillMaxWidth()
-        )
+    fun pick(item: T) {
+        onSelect(item)
+        expanded = false
+        searching = false
+    }
 
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            val typed = query.trim()
-            if (onCreate != null && typed.isNotEmpty() &&
-                items.none { itemLabel(it).equals(typed, ignoreCase = true) }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Create \u201c$typed\u201d", color = MaterialTheme.colorScheme.primary) },
-                    leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    onClick = {
-                        onCreate(typed)
-                        expanded = false
-                    }
-                )
+    fun create() {
+        onCreate?.invoke(typed)
+        expanded = false
+        searching = false
+    }
+
+    Column(modifier) {
+        ExposedDropdownMenuBox(
+            expanded = expanded && !searching,
+            onExpandedChange = {
+                if (!enabled || searching) return@ExposedDropdownMenuBox
+                expanded = it
             }
-            if (matches.isEmpty() && onCreate == null) {
-                Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    Text(
-                        emptyText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        ) {
+            OutlinedTextField(
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                // Closed, it states the choice; searching, it is the search box.
+                value = if (searching) query else selectedLabel,
+                onValueChange = { query = it },
+                enabled = enabled,
+                readOnly = !searching,
+                singleLine = true,
+                shape = MaterialTheme.shapes.small,
+                placeholder = { Text(placeholder) },
+                leadingIcon = if (searching) {
+                    { Icon(Icons.Default.Search, contentDescription = null) }
+                } else null,
+                trailingIcon = {
+                    if (searching) {
+                        IconButton(onClick = { searching = false; query = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Stop searching")
+                        }
+                    } else {
+                        IconButton(
+                            onClick = { query = ""; expanded = false; searching = true },
+                            enabled = enabled
+                        ) {
+                            Icon(Icons.Default.Search, contentDescription = placeholder)
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled && !searching)
+                    .focusRequester(focus)
+                    .fillMaxWidth()
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded && !searching,
+                onDismissRequest = { expanded = false }
+            ) {
+                items.forEach { item ->
+                    DropdownMenuItem(text = { Text(itemLabel(item)) }, onClick = { pick(item) })
                 }
             }
-            matches.forEach { item ->
-                DropdownMenuItem(
-                    text = { Text(itemLabel(item)) },
-                    onClick = {
-                        onSelect(item)
-                        expanded = false
+        }
+
+        if (searching) {
+            LaunchedEffect(query) {
+                // After the keyboard has finished sliding in and the dialog resized.
+                delay(250)
+                results.bringIntoView()
+            }
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp).bringIntoViewRequester(results)
+            ) {
+                // Capped and scrollable: a short filtered list, not the whole page.
+                Column(Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState())) {
+                    if (offerCreate) {
+                        DropdownMenuItem(
+                            text = { Text("Create \u201c$typed\u201d", color = MaterialTheme.colorScheme.primary) },
+                            leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                            onClick = ::create
+                        )
                     }
-                )
+                    if (matches.isEmpty() && !offerCreate) {
+                        Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                            Text(
+                                emptyText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    matches.forEach { item ->
+                        DropdownMenuItem(text = { Text(itemLabel(item)) }, onClick = { pick(item) })
+                    }
+                }
             }
         }
     }
