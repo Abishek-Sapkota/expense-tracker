@@ -112,6 +112,11 @@ dependencies {
     // batches it with other work, runs it after a reboot, and skips it on low battery.
     implementation(libs.androidx.work.runtime)
 
+    // The optional app lock: the system fingerprint/face/screen-lock prompt. It needs a
+    // FragmentActivity, so the fragment library comes in at a version matching activity.
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.fragment)
+
     // Installs the ahead-of-time baseline profiles that Compose and the other AndroidX
     // libraries ship, even for a sideloaded APK, so first launch and scrolling are not
     // running interpreted code.

@@ -6,7 +6,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
 import com.abi.expensetracker.di.ServiceLocator
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
+import android.os.Build
+import com.abi.expensetracker.ui.AppLock
+import com.abi.expensetracker.ui.LockScreen
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -53,7 +56,25 @@ import com.abi.expensetracker.ui.theme.PillShape
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+// A FragmentActivity because the system biometric prompt attaches to one.
+class MainActivity : FragmentActivity() {
+
+    override fun onStart() {
+        super.onStart()
+        AppLock.onForeground()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Not on a rotation: the activity is rebuilt at once and must not ask again.
+        if (!isChangingConfigurations) AppLock.onBackground()
+    }
+
+    private fun unlock() {
+        AppLock.prompt(this, "Unlock Expense tracker") { passed ->
+            if (passed) AppLock.markUnlocked()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -128,6 +149,23 @@ class MainActivity : ComponentActivity() {
                         ServiceLocator.repository(context).bankCount() > 0
                     ) settings.setOnboardingDone(true)
                 }
+                // The lock, when it is on and usable. Null until DataStore answers, so the
+                // ledger never flashes before the lock screen covers it.
+                val lockEnabled by settings.appLock.collectAsStateWithLifecycle(initialValue = null)
+                LaunchedEffect(lockEnabled) {
+                    // Keeps the ledger out of the recent-apps thumbnail while locking is on.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        setRecentsScreenshotEnabled(lockEnabled != true)
+                    }
+                }
+                val lockShows = lockEnabled == true && AppLock.locked && AppLock.available(context)
+                LaunchedEffect(lockShows) { if (lockShows) unlock() }
+                if (lockEnabled == null || lockShows) {
+                    if (lockShows) LockScreen(onUnlock = ::unlock)
+                    else Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+                    return@ExpenseTrackerTheme
+                }
+
                 when (onboardingDone) {
                     null -> {
                         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))

@@ -34,6 +34,7 @@ class SettingsStore(private val context: Context) {
     private val parserVersionKey = intPreferencesKey("parserVersion")
     private val maintenanceStampKey = longPreferencesKey("maintenanceStamp")
     private val autoBackupFolderKey = stringPreferencesKey("autoBackupFolder")
+    private val appLockKey = booleanPreferencesKey("appLock")
     private val lastAutoBackupAtKey = longPreferencesKey("lastAutoBackupAt")
     private val lastAutoBackupErrorKey = stringPreferencesKey("lastAutoBackupError")
 
@@ -59,6 +60,13 @@ class SettingsStore(private val context: Context) {
             if (at != null) it[lastAutoBackupAtKey] = at
             if (error == null) it.remove(lastAutoBackupErrorKey) else it[lastAutoBackupErrorKey] = error
         }
+    }
+
+    /** Whether opening the app asks for a fingerprint or the screen lock. Off by default. */
+    val appLock: Flow<Boolean> = context.dataStore.data.map { it[appLockKey] ?: false }
+
+    suspend fun setAppLock(enabled: Boolean) {
+        context.dataStore.edit { it[appLockKey] = enabled }
     }
 
     val lastSyncedSmsDate: Flow<Long> =

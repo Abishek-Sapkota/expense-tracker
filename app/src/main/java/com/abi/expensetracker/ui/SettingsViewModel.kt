@@ -174,6 +174,11 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             "${r.rules} rules, ${r.banks} banks."
     }
 
+    val appLock: StateFlow<Boolean> = settings.appLock
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun setAppLock(enabled: Boolean) = viewModelScope.launch { settings.setAppLock(enabled) }
+
     /** The weekly backup: its folder (null when off), last success and last error. */
     data class AutoBackupState(val folder: String?, val lastAt: Long?, val error: String?)
 

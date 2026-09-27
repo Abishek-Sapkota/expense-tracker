@@ -1,5 +1,7 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.material3.Switch
+import androidx.fragment.app.FragmentActivity
 import com.abi.expensetracker.ui.theme.ChipShape
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.BorderStroke
@@ -110,6 +112,7 @@ fun SettingsScreen(
     ) { uri -> uri?.let(vm::exportBackup) }
 
     val autoBackup by vm.autoBackup.collectAsStateWithLifecycle()
+    val appLock by vm.appLock.collectAsStateWithLifecycle()
     val folderLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri -> uri?.let(vm::chooseBackupFolder) }
@@ -353,6 +356,10 @@ fun SettingsScreen(
                     onChange = vm::setUseNepaliCalendar
                 )
 
+                SettingsSection.APP_LOCK -> AppLockControls(
+                    enabled = appLock,
+                    onChange = vm::setAppLock
+                )
                 SettingsSection.BACKUP -> {
                     AutoBackupCard(
                         state = autoBackup,
@@ -427,6 +434,7 @@ private enum class SettingsSection(val title: String, val summary: String) {
     MESSAGES("Messages & parsing", "Sync the inbox, rescan it, or rebuild transactions"),
     TEMPLATES("Parser templates", "Teach the app how your bank words its messages"),
     APPEARANCE("Appearance", "Theme and accent colour"),
+    APP_LOCK("App lock", "Fingerprint or screen lock to open the app"),
     BACKUP("Backup", "Weekly automatic backup, export or import")
 }
 
@@ -498,7 +506,7 @@ private val SettingsSection.group: SettingsGroup
         SettingsSection.SPENDING_LIMIT, SettingsSection.CATEGORIES, SettingsSection.CALENDAR -> SettingsGroup.BUDGET
         SettingsSection.ACCOUNTS, SettingsSection.PERMISSIONS, SettingsSection.MESSAGES,
         SettingsSection.TEMPLATES -> SettingsGroup.ENGINE
-        SettingsSection.APPEARANCE, SettingsSection.BACKUP -> SettingsGroup.SYSTEM
+        SettingsSection.APPEARANCE, SettingsSection.APP_LOCK, SettingsSection.BACKUP -> SettingsGroup.SYSTEM
     }
 
 private val SettingsSection.icon: ImageVector
@@ -511,6 +519,7 @@ private val SettingsSection.icon: ImageVector
         SettingsSection.MESSAGES -> Icons.Outlined.MarkChatRead
         SettingsSection.TEMPLATES -> Icons.Outlined.IntegrationInstructions
         SettingsSection.APPEARANCE -> Icons.Outlined.Palette
+        SettingsSection.APP_LOCK -> Icons.Outlined.Lock
         SettingsSection.BACKUP -> Icons.Outlined.SettingsBackupRestore
     }
 
@@ -1112,6 +1121,55 @@ private fun AutoBackupCard(
                     TextButton(onClick = onTurnOff, enabled = !busy) { Text("Turn off") }
                 }
             }
+        }
+    }
+}
+
+/**
+ * The app lock switch. Turning it either way asks for the fingerprint or screen lock
+ * first: on, so the user proves they can get back in before it locks them out; off, so
+ * someone handed an unlocked app cannot switch the lock off.
+ */
+@Composable
+private fun AppLockControls(enabled: Boolean, onChange: (Boolean) -> Unit) {
+    val context = LocalContext.current
+    val activity = context as? FragmentActivity
+    val available = remember { AppLock.available(context) }
+    LedgerCard {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Lock with fingerprint or screen lock",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = enabled,
+                    enabled = available && activity != null,
+                    onCheckedChange = { wanted ->
+                        activity?.let {
+                            AppLock.prompt(it, if (wanted) "Turn on app lock" else "Turn off app lock") { passed ->
+                                if (passed) {
+                                    // The check just now counts as unlocking this session.
+                                    AppLock.markUnlocked()
+                                    onChange(wanted)
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+            Text(
+                if (available) {
+                    "Asks when the app opens, and again after a minute in the background. " +
+                        "Messages and notifications are still read and booked while it is " +
+                        "locked, and the recent-apps preview is hidden."
+                } else {
+                    "Set up a fingerprint, face or screen lock in your phone's settings first."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

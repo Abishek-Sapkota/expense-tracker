@@ -102,6 +102,11 @@ convention listed here, update the matching line in the same change.
   URI grant), names files `expenses-auto-<date>.json`, keeps the newest 4, records last
   success/error. The only scheduled background work in the app.
 - `di/ServiceLocator.kt` — `repository(context)`, `backupManager(context)`.
+- `ui/AppLock.kt` — optional app lock (Settings → App lock, `SettingsStore.appLock`, off by
+  default): `BiometricPrompt` with weak biometrics or device credential, asks on a new
+  process and after 60 s in the background (`AppLock.locked` is Compose state read by
+  `MainActivity`, now a `FragmentActivity`); toggling needs a pass; hides the recents
+  thumbnail on API 33+. Locks screens only — ingest, backup and remark replies still run.
 - `ui/Navigation.kt` — `Destination` enum = bottom bar tabs (HOME/Ledger, TRENDS, LOANS,
   SETTINGS); tabs are `HorizontalPager` pages. Icons everywhere are the mockups'
   Material Symbols via `material-icons-extended` (tabs: ReceiptLong, QueryStats, SwapHoriz,
