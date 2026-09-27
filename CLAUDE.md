@@ -46,7 +46,10 @@ convention listed here, update the matching line in the same change.
   broadcast; notification ids include `postTime`); `PARSER_VERSION` bump forces a reparse on next app start.
   `observeSpentBetween` = debits − split recoveries (repayments on split bills, capped,
   dated on the bill); Trends subtracts `observeSplitRecoveries` per day/category.
-  `deleteTransaction` flags parsed messages (+ copies) deleted; `markNotDuplicate` flags,
+  `ingest`, `reparseAll` and backup import hold `DbWrites.lock` and run as one
+  `withTransaction` under `NonCancellable`. `deleteTransactions` (batch, one transaction)
+  flags parsed messages (+ copies) deleted, removes a split on the row with its shares and
+  leaves a linked loan entry as cash; `markNotDuplicate` flags,
   unfolds and books a copy. `editTransaction` re-reads the row (category saves on pick)
   and re-runs keywords on the new remark unless the category was hand-picked (picked in
   that dialog, or not what the old text's keywords gave).
@@ -65,7 +68,8 @@ convention listed here, update the matching line in the same change.
   `SenderNormalizer`, `SettingsStore` (DataStore), `StableId` (sha256 ids), `todayFlow()` (date that re-emits at
   midnight; every "Today"/"this month" range must follow it).
 - `parser/` — pure Kotlin: `SmsParser`, `FieldExtractors`, `Regexes`, `DateParser`,
-  `TemplateCompiler` (`{amount}` style templates to regex; `{date}`/`{time}` override the
+  `TemplateCompiler` (`{amount}` style templates to regex; free-text spans bounded, leading
+  `{any}` dropped; `SmsParser` gives each rule 50 ms via a deadline CharSequence; `{date}`/`{time}` override the
   arrival timestamp via `DateParser`/`TimeParser` in `SmsParser.occurredAt`), `DefaultRules`.
 - `sms/` — `SmsInboxReader` (history backfill), `SmsReceiver` (live).
 - `notification/` — `TxnNotificationListener` (`ensureBound` on every process start and

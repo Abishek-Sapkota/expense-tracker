@@ -479,6 +479,10 @@ interface LoanDao {
     @Query("DELETE FROM loan_entries WHERE splitId = :splitId AND kind = 'LENT'")
     suspend fun deleteShares(splitId: Long)
 
+    /** A deleted transaction's loan entry stays, as a cash entry. */
+    @Query("UPDATE loan_entries SET txnId = NULL WHERE txnId = :txnId")
+    suspend fun detachFromTxn(txnId: String)
+
     /** Repayments of a deleted split stay as plain loan repayments. */
     @Query("UPDATE loan_entries SET splitId = NULL WHERE splitId = :splitId")
     suspend fun detachFromSplit(splitId: Long)

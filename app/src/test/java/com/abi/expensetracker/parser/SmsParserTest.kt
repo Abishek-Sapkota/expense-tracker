@@ -239,6 +239,25 @@ class SmsParserTest {
         assertTrue(out is ParseOutcome.Parsed)
     }
 
+
+    @Test
+    fun `a pathological template gives up instead of hanging`() {
+        val compiled = TemplateCompiler.compile(
+            "{any}Rs {amount} {any} to {merchant} {any} on {date} {any} Ref {ref}"
+        ) as TemplateCompiler.Outcome.Ok
+        // An uncompiled worst case too: stored rules keep the regex older builds wrote.
+        val unbounded = compiled.regex.replace(".{0,400}?", ".*?").replace(".{1,120}?", ".+?")
+        val rules = listOf(compiled.regex, unbounded).mapIndexed { i, regex ->
+            com.abi.expensetracker.data.model.Rule(
+                id = i + 1L, name = "slow", senderPattern = ".*", bodyPattern = regex,
+                direction = com.abi.expensetracker.data.model.Direction.DEBIT
+            )
+        }
+        val body = "Rs 500 " + "paid to shop on 20/09/2026 ".repeat(90)
+        val started = System.nanoTime()
+        SmsParser(rules).parse(message(body))
+        assertTrue((System.nanoTime() - started) < 2_000_000_000L)
+    }
 }
 
 class MoneyTest {

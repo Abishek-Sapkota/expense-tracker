@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.sync.withLock
 
 /**
  * How far apart two identical messages may be and still count as one, for live messages.
@@ -308,17 +310,37 @@ class ExpenseRepository(
      * and any copies folded into it, are flagged deleted first; otherwise a copy would
      * surface as the transaction in its place.
      */
-    suspend fun deleteTransaction(txn: Txn) = withContext(Dispatchers.IO) {
-        db.withTransaction {
-            txn.rawId?.let { rawId ->
-                (listOf(rawId) + db.txnCopyDao().rawIdsFor(txn.id)).forEach { id ->
-                    val flag = db.messageFlagDao().byId(id) ?: MessageFlag(id)
-                    db.messageFlagDao().upsert(flag.copy(deleted = true))
-                }
-            }
-            db.txnDao().delete(txn)
-            db.txnCopyDao().deleteOrphans()
+    suspend fun deleteTransaction(txn: Txn) = deleteTransactions(listOf(txn))
+
+    /**
+     * Several at once, in one transaction, so the ledger redraws once rather than once per
+     * row.
+     *
+     * What pointed at a row goes with it or is let go: a split on it is removed with its
+     * shares (repayments stay as plain loan repayments, as when a split is deleted), and a
+     * loan entry on it stays in Loans as a cash entry, because the debt did not stop
+     * existing when the bank row did. Left alone, a split kept friends owing and no longer
+     * counted their repayments, and a loan pointed at nothing.
+     */
+    suspend fun deleteTransactions(txns: List<Txn>) = withContext(Dispatchers.IO) {
+        db.withTransaction { txns.forEach { deleteOne(it) } }
+    }
+
+    private suspend fun deleteOne(txn: Txn) {
+        db.splitDao().byTxnId(txn.id)?.let { split ->
+            db.loanDao().deleteShares(split.id)
+            db.loanDao().detachFromSplit(split.id)
+            db.splitDao().delete(split)
         }
+        db.loanDao().detachFromTxn(txn.id)
+        txn.rawId?.let { rawId ->
+            (listOf(rawId) + db.txnCopyDao().rawIdsFor(txn.id)).forEach { id ->
+                val flag = db.messageFlagDao().byId(id) ?: MessageFlag(id)
+                db.messageFlagDao().upsert(flag.copy(deleted = true))
+            }
+        }
+        db.txnDao().delete(txn)
+        db.txnCopyDao().deleteOrphans()
     }
 
     /**
@@ -591,41 +613,53 @@ class ExpenseRepository(
         messages: List<RawMessage>,
         prompt: Boolean = true,
         duplicateWindowMillis: Long = DUPLICATE_WINDOW_MILLIS
-    ): Int =
-        withContext(Dispatchers.IO) {
-            // Also against the rest of this batch: two copies of one message in a single
-            // history read would both pass a check that only looks at the database.
-            val kept = mutableListOf<RawMessage>()
-            val candidates = messages.filter { message ->
-                val stored = db.rawMessageDao().duplicateOf(
-                    sender = message.sender,
-                    body = message.body,
-                    from = message.sentAt - duplicateWindowMillis,
-                    to = message.sentAt + duplicateWindowMillis
-                )
-                val inBatch = kept.any {
-                    it.sender == message.sender && it.body == message.body &&
-                        kotlin.math.abs(it.sentAt - message.sentAt) <= duplicateWindowMillis
-                }
-                (stored == null && !inBatch).also { if (it) kept += message }
-            }
-            // Only what was actually new is parsed. A message already stored under this id
-            // has had its turn; parsing it again rebuilt its transaction over the old one.
-            val insertedIds = db.rawMessageDao().insertAll(candidates)
-            val messages = candidates.filterIndexed { i, _ -> insertedIds[i] != -1L }
-            val parser = SmsParser(db.ruleDao().enabled())
-            val byTxn = mutableMapOf<String, RawMessage>()
-            val parsed = messages.mapNotNull { message ->
-                val txn = (parser.parse(message) as? ParseOutcome.Parsed)?.txn
-                if (txn != null) byTxn[txn.id] = message
-                txn
-            }
-            val categorized = categorizer().apply(parsed)
-            val inserted = insertParsed(categorized.map { it to byTxn.getValue(it.id).sender })
-            // A copy is a transaction already asked about, or about to be.
-            if (prompt) askWhatFor(inserted, byTxn)
-            inserted.size
+    ): Int = withContext(Dispatchers.IO) {
+        // Storing, parsing and booking are one transaction, finished even if the caller's
+        // scope is cancelled (the listener unbinding, the receiver's process going): a
+        // message stored but never parsed was never tried again, since the duplicate check
+        // then found it.
+        val (inserted, byTxn) = DbWrites.lock.withLock {
+            withContext(NonCancellable) { db.withTransaction { storeAndBook(messages, duplicateWindowMillis) } }
         }
+        // A copy is a transaction already asked about, or about to be.
+        if (prompt) askWhatFor(inserted, byTxn)
+        inserted.size
+    }
+
+    private suspend fun storeAndBook(
+        messages: List<RawMessage>,
+        duplicateWindowMillis: Long
+    ): Pair<List<Txn>, Map<String, RawMessage>> {
+        // Also against the rest of this batch: two copies of one message in a single
+        // history read would both pass a check that only looks at the database.
+        val kept = mutableListOf<RawMessage>()
+        val candidates = messages.filter { message ->
+            val stored = db.rawMessageDao().duplicateOf(
+                sender = message.sender,
+                body = message.body,
+                from = message.sentAt - duplicateWindowMillis,
+                to = message.sentAt + duplicateWindowMillis
+            )
+            val inBatch = kept.any {
+                it.sender == message.sender && it.body == message.body &&
+                    kotlin.math.abs(it.sentAt - message.sentAt) <= duplicateWindowMillis
+            }
+            (stored == null && !inBatch).also { if (it) kept += message }
+        }
+        // Only what was actually new is parsed. A message already stored under this id
+        // has had its turn; parsing it again rebuilt its transaction over the old one.
+        val insertedIds = db.rawMessageDao().insertAll(candidates)
+        val messages = candidates.filterIndexed { i, _ -> insertedIds[i] != -1L }
+        val parser = SmsParser(db.ruleDao().enabled())
+        val byTxn = mutableMapOf<String, RawMessage>()
+        val parsed = messages.mapNotNull { message ->
+            val txn = (parser.parse(message) as? ParseOutcome.Parsed)?.txn
+            if (txn != null) byTxn[txn.id] = message
+            txn
+        }
+        val categorized = categorizer().apply(parsed)
+        return insertParsed(categorized.map { it to byTxn.getValue(it.id).sender }) to byTxn
+    }
 
     /**
      * Asks, for the rows worth asking about.
@@ -695,6 +729,16 @@ class ExpenseRepository(
      * a rule fixed today retroactively corrects years of history.
      */
     suspend fun reparseAll(): Int = withContext(Dispatchers.IO) {
+        // One transaction under the write lock: the ledger no longer empties and refills
+        // page by page on screen, and a message arriving mid-way waits instead of being
+        // read before its own original. Paging by offset is then safe, as nothing else
+        // writes until it is done.
+        DbWrites.lock.withLock {
+            withContext(NonCancellable) { db.withTransaction { rebuildParsed() } }
+        }.also { settings.setParserVersion(PARSER_VERSION) }
+    }
+
+    private suspend fun rebuildParsed(): Int {
         val parser = SmsParser(db.ruleDao().enabled())
         // Read once rather than per page: the category list does not change mid-reparse.
         val categorizing = categorizer()
@@ -715,8 +759,7 @@ class ExpenseRepository(
             parsedCount += insertParsed(categorized.zip(parsed) { txn, (_, sender) -> txn to sender }).size
             offset += page.size
         }
-        settings.setParserVersion(PARSER_VERSION)
-        parsedCount
+        return parsedCount
     }
 
     suspend fun markReviewed(txn: Txn) = withContext(Dispatchers.IO) {

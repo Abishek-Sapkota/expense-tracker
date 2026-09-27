@@ -23,6 +23,8 @@ import com.abi.expensetracker.data.model.Txn
 import com.abi.expensetracker.data.model.TxnCopy
 import androidx.room.withTransaction
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.sync.withLock
+import com.abi.expensetracker.data.DbWrites
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -269,7 +271,7 @@ class BackupManager(
                 val stream = context.contentResolver.openInputStream(uri)
                     ?: error("Could not open $uri for reading")
                 val (result, lastSynced) = stream.use { input ->
-                    db.withTransaction { read(input, mode, declared) }
+                    DbWrites.lock.withLock { db.withTransaction { read(input, mode, declared) } }
                 }
                 // Only a replace takes the file's inbox watermark. On a merge it could sit
                 // ahead of what this phone has read, and the next sync would skip the gap.

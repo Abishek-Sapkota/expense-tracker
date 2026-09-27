@@ -272,7 +272,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun delete(txns: List<Txn>) = viewModelScope.launch {
-        txns.forEach { repository.deleteTransaction(it) }
+        repository.deleteTransactions(txns)
         _status.value = if (txns.size == 1) "Deleted 1 transaction." else "Deleted ${txns.size} transactions."
     }
 

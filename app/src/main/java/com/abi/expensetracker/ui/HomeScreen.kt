@@ -331,6 +331,9 @@ fun HomeScreen(
 
     if (confirmDelete && selecting) {
         val count = selectedTxns.size
+        val selectedRows = rows.filter { it.txn.id in selectedIds }
+        val hasSplit = selectedRows.any { it.split != null }
+        val hasLoan = selectedRows.any { it.loan != null }
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             shape = MaterialTheme.shapes.extraLarge,
@@ -341,7 +344,10 @@ fun HomeScreen(
                     // A parsed row is rebuilt on reparse unless its message is flagged, so
                     // saying it stays gone is the promise the flag keeps.
                     "This removes them from the ledger. Their messages are kept, but will " +
-                        "not be booked again on sync or reparse.",
+                        "not be booked again on sync or reparse." +
+                        // Said up front because both change what Loans shows.
+                        (if (hasSplit) " Split bills among them are removed, with what friends owe on them." else "") +
+                        (if (hasLoan) " Loans linked to them stay in Loans as cash entries." else ""),
                     style = MaterialTheme.typography.bodyMedium
                 )
             },

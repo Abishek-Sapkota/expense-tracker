@@ -48,11 +48,14 @@ object TemplateCompiler {
         "time" -> """(?<time>$TIME)"""
         // Lazy while more template follows, greedy at the end. A lazy match with nothing
         // after it to anchor against would capture a single character.
-        "merchant" -> if (isLast) """(?<merchant>.+)""" else """(?<merchant>.+?)"""
+        // Free-text spans are bounded. Unbounded lazy spans side by side backtrack
+        // combinatorially on a long message that does not match, and a Gmail body is
+        // several kilobytes; these lengths are far past any real merchant or remark.
+        "merchant" -> if (isLast) """(?<merchant>.{1,120})""" else """(?<merchant>.{1,120}?)"""
         // Same lazy/greedy split as merchant: free text with no shape of its own, so the
         // literal that follows it in the template is the only thing that can end it.
-        "remark" -> if (isLast) """(?<remark>.+)""" else """(?<remark>.+?)"""
-        "any" -> if (isLast) """.*""" else """.*?"""
+        "remark" -> if (isLast) """(?<remark>.{1,160})""" else """(?<remark>.{1,160}?)"""
+        "any" -> if (isLast) """.{0,400}""" else """.{0,400}?"""
         else -> throw IllegalArgumentException(name)
     }
 
@@ -94,6 +97,9 @@ object TemplateCompiler {
         val regex = buildString {
             append("(?i)")
             tokens.forEachIndexed { index, token ->
+                // A leading {any} adds nothing (the match is searched for anywhere) except
+                // one more span to backtrack through.
+                if (index == 0 && token is Token.Placeholder && token.name == "any") return@forEachIndexed
                 when (token) {
                     is Token.Placeholder -> append(capture(token.name, index == lastCapturingIndex))
                     is Token.Literal -> append(literalToRegex(token.text))

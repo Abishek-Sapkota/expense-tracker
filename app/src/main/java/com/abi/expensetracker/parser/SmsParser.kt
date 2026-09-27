@@ -45,10 +45,42 @@ class SmsParser(
             }
         }
 
+    /**
+     * The match, or null when there is none or the rule took too long to decide.
+     *
+     * A user template can be written so that it backtracks for minutes on a long message
+     * it does not match, and it runs on every notification and across every stored message
+     * on a reparse. The text is handed over through a sequence that gives up after a
+     * deadline, so one such rule costs a few milliseconds instead of freezing ingest.
+     */
+    private fun findWithin(regex: Regex, body: String): MatchResult? = try {
+        regex.find(Deadline(body, System.nanoTime() + RULE_TIME_LIMIT_NANOS))
+    } catch (e: Deadline.Expired) {
+        null
+    }
+
+    private class Deadline(private val text: CharSequence, private val until: Long) : CharSequence {
+        class Expired : RuntimeException() {
+            override fun fillInStackTrace(): Throwable = this
+        }
+
+        private var reads = 0
+
+        override val length: Int get() = text.length
+        override fun get(index: Int): Char {
+            // The clock only every 1,024 reads: a reparse reads millions of characters.
+            if (++reads and 1023 == 0 && System.nanoTime() > until) throw Expired()
+            return text[index]
+        }
+        override fun subSequence(startIndex: Int, endIndex: Int): CharSequence =
+            text.subSequence(startIndex, endIndex)
+        override fun toString(): String = text.toString()
+    }
+
     fun parse(message: RawMessage): ParseOutcome {
         for (c in compiled) {
             if (!c.sender.containsMatchIn(message.sender)) continue
-            val match = c.body.find(message.body) ?: continue
+            val match = findWithin(c.body, message.body) ?: continue
 
             val amountMinor = match.namedOrNull("amount")
                 ?.let { Money.parseToMinor(it) }
@@ -121,6 +153,9 @@ class SmsParser(
     }
 
     private companion object {
+        /** Far above any sane rule on any real message, which match in microseconds. */
+        const val RULE_TIME_LIMIT_NANOS = 50_000_000L
+
         /** Two years either side of the message. */
         const val MAX_DATE_DRIFT_MILLIS = 730L * 24 * 60 * 60 * 1000
 
