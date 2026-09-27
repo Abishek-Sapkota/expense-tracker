@@ -71,4 +71,23 @@ class CategorizerTest {
     fun `no categories means nothing is assigned`() {
         assertNull(Categorizer(emptyList()).categoryIdFor(txn(merchant = "Bhatbhateni")))
     }
+
+    @Test
+    fun `keywords match whole words, not parts of other words`() {
+        val c = Categorizer(DefaultCategories.ALL.mapIndexed { i, cat -> cat.copy(id = i + 1L) })
+        fun cat(remark: String) = c.categoryIdFor(
+            Txn(
+                id = "t", rawId = null, amountMinor = 100, direction = Direction.DEBIT,
+                accountTail = null, merchant = null, remark = remark, refNumber = null,
+                balanceMinor = null, occurredAt = 0
+            )
+        )
+        assertNull(cat("lunch near office"))
+        assertNull(cat("business meeting"))
+        assertNull(cat("to current account"))
+        assertNull(cat("label printing"))
+        // Still found between separators and in the plural.
+        assertEquals(3L, cat("MOS/eSewa/9851180816/khaja"))
+        assertEquals(3L, cat("momos"))
+    }
 }

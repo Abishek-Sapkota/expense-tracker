@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.abi.expensetracker.data.MonthWindow
 import com.abi.expensetracker.data.SettingsStore
+import com.abi.expensetracker.data.todayFlow
 import com.abi.expensetracker.di.ServiceLocator
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,11 +82,14 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
      * containing today is the honest answer to "which month am I looking at", and keeping
      * the old boundaries would show a window that belongs to neither calendar.
      */
-    private val _anchor = MutableStateFlow(LocalDate.now())
+    // Null means "the month containing today", which moves with the date: an anchor fixed
+    // when the screen opened kept showing last month after the month turned.
+    private val _anchor = MutableStateFlow<LocalDate?>(null)
+    private val today = todayFlow()
 
     val window: StateFlow<MonthWindow> =
-        combine(_anchor, settings.useNepaliCalendar) { anchor, nepali ->
-            MonthWindow.of(anchor, nepali)
+        combine(_anchor, settings.useNepaliCalendar, today) { anchor, nepali, day ->
+            MonthWindow.of(anchor ?: day, nepali)
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
@@ -93,7 +97,7 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
         )
 
     /** Back to the month containing today. */
-    fun resetMonth() { _anchor.value = LocalDate.now() }
+    fun resetMonth() { _anchor.value = null }
 
     fun previousMonth() {
         _anchor.value = window.value.previous.firstDay
@@ -102,11 +106,12 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
     /** Never past the current month: there is nothing recorded in the future to show. */
     fun nextMonth() {
         val next = window.value.next
-        if (!next.firstDay.isAfter(LocalDate.now(zone))) _anchor.value = next.firstDay
+        val now = LocalDate.now(zone)
+        if (next.firstDay.isAfter(now)) return
+        _anchor.value = if (now in next) null else next.firstDay
     }
 
-    val canGoForward: StateFlow<Boolean> = window
-        .map { LocalDate.now(zone) !in it }
+    val canGoForward: StateFlow<Boolean> = combine(window, today) { w, day -> day !in w }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val state: StateFlow<TrendsState> = window.flatMapLatest { window ->

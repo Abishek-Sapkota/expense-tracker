@@ -30,7 +30,14 @@ class SmsParser(
         .sortedWith(compareBy({ it.priority }, { it.id }))
         .mapNotNull { rule ->
             try {
-                Compiled(rule, Regex(rule.senderPattern), Regex(rule.bodyPattern))
+                // Senders case-insensitively: a template scoped from the Templates screen
+                // stores the normalised (upper-case) sender, and "SanimaBank" or a
+                // notification package such as "com.f1soft.esewa" then never matched.
+                Compiled(
+                    rule,
+                    Regex(rule.senderPattern, RegexOption.IGNORE_CASE),
+                    Regex(rule.bodyPattern)
+                )
             } catch (e: Exception) {
                 // A user-authored rule with bad regex must not take down parsing of
                 // every other message. Skip it; the rules screen shows it as invalid.

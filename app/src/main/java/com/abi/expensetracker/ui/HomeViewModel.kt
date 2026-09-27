@@ -12,6 +12,7 @@ import com.abi.expensetracker.data.SplitSummary
 import com.abi.expensetracker.data.Splits
 import com.abi.expensetracker.data.Period
 import com.abi.expensetracker.data.SettingsStore
+import com.abi.expensetracker.data.todayFlow
 import com.abi.expensetracker.data.model.Bank
 import com.abi.expensetracker.data.model.Category
 import com.abi.expensetracker.data.model.Direction
@@ -57,20 +58,22 @@ data class PeriodSelection(
     val customStart: LocalDate? = null,
     val customEnd: LocalDate? = null,
     /** Which calendar "This month" means; filled in from the setting, not by the chips. */
-    val nepali: Boolean = false
+    val nepali: Boolean = false,
+    /** The date "Today" means; filled in from [todayFlow] so it moves at midnight. */
+    val today: LocalDate = LocalDate.now()
 ) {
     val range: DateRange
         get() = if (period == Period.CUSTOM && customStart != null && customEnd != null) {
             Period.rangeOfDays(customStart, customEnd)
         } else {
-            period.range(nepali = nepali)
+            period.range(today = today, nepali = nepali)
         }
 
     val label: String
         get() = if (period == Period.CUSTOM && customStart != null && customEnd != null) {
             "$customStart to $customEnd"
         } else if (period == Period.THIS_MONTH) {
-            MonthWindow.of(LocalDate.now(), nepali).label
+            MonthWindow.of(today, nepali).label
         } else {
             period.label
         }
@@ -84,7 +87,9 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _selection = MutableStateFlow(PeriodSelection())
     val selection: StateFlow<PeriodSelection> =
-        combine(_selection, settings.useNepaliCalendar) { sel, nepali -> sel.copy(nepali = nepali) }
+        combine(_selection, settings.useNepaliCalendar, todayFlow()) { sel, nepali, day ->
+            sel.copy(nepali = nepali, today = day)
+        }
             .stateIn(viewModelScope, SharingStarted.Eagerly, PeriodSelection())
 
     /** The user's accounts, for the manual entry picker. */
@@ -168,16 +173,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
      * overnight, and the window is otherwise fixed at the moment the flow was built. It only
      * runs while something is collecting (the app is on screen) and wakes once a day.
      */
-    private val today = flow {
-        while (true) {
-            val now = java.time.LocalDateTime.now()
-            emit(now.toLocalDate())
-            // Sleep until just past midnight instead of waking every minute: the date is
-            // all this feeds, and it changes once a day.
-            val nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay()
-            delay(java.time.Duration.between(now, nextMidnight).toMillis() + 1_000)
-        }
-    }.distinctUntilChanged()
+    private val today = todayFlow()
 
     /** The spending limit and its progress, or null when no limit is set. */
     /** The app-wide calendar setting, which the ledger's dates and the limit both read. */

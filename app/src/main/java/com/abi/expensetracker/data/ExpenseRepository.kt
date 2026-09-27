@@ -57,7 +57,7 @@ private const val HISTORY_DUPLICATE_WINDOW_MILLIS = 6 * 60 * 60 * 1000L
  * Bump when parsing or de-duplication logic changes, so the next start reparses stored
  * messages under the new logic instead of leaving history as the old code read it.
  */
-const val PARSER_VERSION = 2
+const val PARSER_VERSION = 3
 
 class ExpenseRepository(
     private val context: Context,

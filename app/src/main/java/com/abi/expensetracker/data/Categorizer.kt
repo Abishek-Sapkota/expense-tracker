@@ -15,11 +15,22 @@ import com.abi.expensetracker.data.model.Txn
  */
 class Categorizer(private val categories: List<Category>) {
 
-    private val index: List<Pair<String, Long>> = categories
+    /**
+     * Keywords match whole words only: as a substring "nea" filed "lunch near office"
+     * under Utilities, "bus" filed "business lunch" under Transport and "rent" caught
+     * "current account". A keyword may still span words ("bhat bhateni"), and the edges
+     * are any non-letter-or-digit, so "MOS/eSewa/khaja" still finds "khaja".
+     */
+    private val index: List<Pair<Regex, Long>> = categories
         .flatMap { category -> category.keywordList.map { it to category.id } }
         // Longest first, so the most specific keyword is tested before a shorter one
         // that happens to be contained in the same text.
         .sortedByDescending { it.first.length }
+        .map { (keyword, id) ->
+            // A trailing "s"/"es" still counts, so "momos" is Dining. \p{M} keeps a
+            // Devanagari vowel sign from reading as a word edge.
+            Regex("""(?<![\p{L}\p{M}\p{N}])${Regex.escape(keyword)}(?:e?s)?(?![\p{L}\p{M}\p{N}])""") to id
+        }
 
     fun categoryIdFor(txn: Txn): Long? {
         if (index.isEmpty()) return null
@@ -27,7 +38,7 @@ class Categorizer(private val categories: List<Category>) {
             .joinToString(" ")
             .lowercase()
         if (haystack.isBlank()) return null
-        return index.firstOrNull { (keyword, _) -> haystack.contains(keyword) }?.second
+        return index.firstOrNull { (keyword, _) -> keyword.containsMatchIn(haystack) }?.second
     }
 
     /**

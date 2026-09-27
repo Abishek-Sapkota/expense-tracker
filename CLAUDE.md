@@ -54,7 +54,7 @@ convention listed here, update the matching line in the same change.
   `NepaliCalendar`, `Splits` (equal-share math, split summaries from loan entries),
   `AppIconRef` (`app:<pkg>` icons, `appLabel()` resolves notification package → app name),
   `CategoryColors` (24-colour palette; `Category.color` or a stable default by id;
-  `nextFree` for new ones; Uncategorised is grey), `Categorizer` (keyword auto-category), `DuplicateMatcher` (SMS vs
+  `nextFree` for new ones; Uncategorised is grey), `Categorizer` (keyword auto-category, whole words + optional plural s/es), `DuplicateMatcher` (SMS vs
   email/notification copy of same txn: same amount+direction, ±60 min, different sender,
   one copy per sender, differing balances reject, a shared ref accepts, else remark lead
   token must agree). Txn ids are one per message (`Txn.idFor(rawId)`), never per ref;
@@ -62,7 +62,8 @@ convention listed here, update the matching line in the same change.
   replaces a row. Reparse keeps edited rows and rows linked to a loan or split. One SMS can also arrive as a `com.google.android.apps.messaging`
   notification, and banks email via `com.google.android.gm`. `BankResolver` (SMS: sender link only; notification package: account named in the
   app's label first, else account name in the message body, longest name wins),
-  `SenderNormalizer`, `SettingsStore` (DataStore), `StableId` (sha256 ids).
+  `SenderNormalizer`, `SettingsStore` (DataStore), `StableId` (sha256 ids), `todayFlow()` (date that re-emits at
+  midnight; every "Today"/"this month" range must follow it).
 - `parser/` — pure Kotlin: `SmsParser`, `FieldExtractors`, `Regexes`, `DateParser`,
   `TemplateCompiler` (`{amount}` style templates to regex; `{date}`/`{time}` override the
   arrival timestamp via `DateParser`/`TimeParser` in `SmsParser.occurredAt`), `DefaultRules`.

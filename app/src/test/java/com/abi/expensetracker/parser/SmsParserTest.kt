@@ -228,6 +228,17 @@ class SmsParserTest {
     fun `a failed payment is not a transaction`() {
         assertEquals(ParseOutcome.NoMatch, parse("Your payment of NPR 100.00 for 9840760280 failed. Please try again."))
     }
+    @Test
+    fun `a sender-scoped template matches the sender in any case`() {
+        val compiled = TemplateCompiler.compile("{amount} withdrawn from {any}") as TemplateCompiler.Outcome.Ok
+        val rule = com.abi.expensetracker.data.model.Rule(
+            id = 1, name = "Sanima", senderPattern = Regex.escape("SANIMABANK"),
+            bodyPattern = compiled.regex, direction = com.abi.expensetracker.data.model.Direction.DEBIT
+        )
+        val out = SmsParser(listOf(rule)).parse(message("155.00 withdrawn from A/C 0#11", sender = "SanimaBank"))
+        assertTrue(out is ParseOutcome.Parsed)
+    }
+
 }
 
 class MoneyTest {
@@ -251,4 +262,5 @@ class MoneyTest {
         assertNotNull(Money.format(45_000L))
         assertEquals("रु450.00", Money.format(45_000L))
     }
+
 }
