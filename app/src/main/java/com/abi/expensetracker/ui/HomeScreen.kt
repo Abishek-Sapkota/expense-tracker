@@ -4,8 +4,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TextField
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -190,22 +190,34 @@ fun HomeScreen(
                         }
                     },
                     title = {
-                        TextField(
+                        // A bare text field: Material's TextField is 56dp tall and the 52dp
+                        // bar cut the typed text in half.
+                        val textStyle = MaterialTheme.typography.titleMedium
+                            .copy(color = MaterialTheme.colorScheme.onSurface)
+                        BasicTextField(
                             value = query.orEmpty(),
                             onValueChange = vm::setQuery,
-                            placeholder = { Text("Search merchant, remark or amount") },
                             singleLine = true,
+                            textStyle = textStyle,
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.Sentences,
                                 imeAction = ImeAction.Search
                             ),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            modifier = Modifier.fillMaxWidth().focusRequester(focus)
+                            modifier = Modifier.fillMaxWidth().focusRequester(focus),
+                            decorationBox = { field ->
+                                Box(contentAlignment = Alignment.CenterStart) {
+                                    if (query.isNullOrEmpty()) {
+                                        Text(
+                                            "Search merchant, remark or amount",
+                                            style = textStyle,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1
+                                        )
+                                    }
+                                    field()
+                                }
+                            }
                         )
                     },
                     actions = {

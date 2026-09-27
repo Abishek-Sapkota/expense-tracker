@@ -186,16 +186,17 @@ fun TrendsScreen(vm: TrendsViewModel = viewModel(), resetSignal: Int = 0) {
             // The chevrons already say the rows open; the loans/splits note lives once, in
             // the total card, and only when it changed the number.
             item { SectionHeader(title = "By category") }
-            // Under the breakdown, where the uncategorised share shows. Counted over all
-            // time, like the queue it opens: a filed month hides an unfiled one otherwise.
-            if (uncategorised > 0) item {
-                OutlinedButton(
-                    onClick = { sorting = true },
-                    shape = PillShape,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                ) { Text("Sort $uncategorised uncategorised payment${if (uncategorised == 1) "" else "s"}") }
-            }
             item { CategoryCard(state.categories, onOpen = vm::openCategory) }
+            // Last on the page, centred: a follow-up to the breakdown, not part of it.
+            // Counted over all time, like the queue it opens, since a filed month would
+            // otherwise hide an unfiled one.
+            if (uncategorised > 0) item {
+                Box(Modifier.fillMaxWidth().padding(top = 16.dp), contentAlignment = Alignment.Center) {
+                    OutlinedButton(onClick = { sorting = true }, shape = PillShape) {
+                        Text("Sort $uncategorised uncategorised payment${if (uncategorised == 1) "" else "s"}")
+                    }
+                }
+            }
             item { Spacer(Modifier.height(24.dp)) }
         }
     }
