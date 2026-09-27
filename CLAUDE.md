@@ -76,7 +76,11 @@ convention listed here, update the matching line in the same change.
   only stores notifications when `readAppNotifications` (default on) and the package is in
   `SettingsStore.notificationApps` (allowlist picked in Accounts; seeded from `BankApp` on
   first read).
-- `backup/` — `BackupManager`, `BackupSchema` (streaming JSON export/import).
+- `backup/` — `BackupManager`, `BackupSchema` (streaming JSON export/import, schema 12 adds
+  `txnCopies`). Import is one `withTransaction` under `NonCancellable`; MERGE remaps
+  category/bank/rule ids by name (rules by patterns), keeps local sender links and loan
+  links, and skips messages already booked. Safety copy before REPLACE goes to
+  `filesDir/pre-import/` (newest 3).
 - `di/ServiceLocator.kt` — `repository(context)`, `backupManager(context)`.
 - `ui/Navigation.kt` — `Destination` enum = bottom bar tabs (HOME/Ledger, TRENDS, LOANS,
   SETTINGS); tabs are `HorizontalPager` pages. Icons everywhere are the mockups'

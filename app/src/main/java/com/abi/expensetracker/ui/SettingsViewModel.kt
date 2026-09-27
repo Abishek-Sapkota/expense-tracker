@@ -173,16 +173,19 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun importBackup(uri: Uri, mode: ImportMode) = launchTask("Importing") {
         val safety = if (mode == ImportMode.REPLACE) {
-            backup.exportToCache("pre-import-${System.currentTimeMillis()}.json").name
+            backup.exportSafetyCopy("pre-import-${System.currentTimeMillis()}.json").name
         } else null
 
         val r = backup.importFrom(uri, mode)
+        // Files before schema 12 carry no copies, so every folded message would come back
+        // as unread; a reparse folds them again.
+        if (r.schemaVersion < 12) repository.reparseAll()
         // A restored backup can bring rows with no category; file them now rather than
         // leaving it to startup, which no longer runs this on every launch.
         repository.categorizeUncategorized()
         buildString {
             append("Imported ${r.rawMessages} messages, ${r.transactions} transactions.")
-            if (safety != null) append(" Previous data saved to cache as $safety.")
+            if (safety != null) append(" Previous data kept in app storage as $safety.")
         }
     }
 

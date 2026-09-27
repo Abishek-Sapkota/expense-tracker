@@ -6,7 +6,7 @@ object BackupSchema {
      * Without this field the first schema change would orphan every backup already
      * written — which is exactly when a backup matters most.
      */
-    const val CURRENT_VERSION = 11
+    const val CURRENT_VERSION = 12
 
     const val FIELD_SCHEMA_VERSION = "schemaVersion"
     const val FIELD_EXPORTED_AT = "exportedAt"
@@ -23,6 +23,11 @@ object BackupSchema {
     const val FIELD_LOANS = "loans"
     /** Since 9. Written before [FIELD_LOANS], whose entries refer to these ids. */
     const val FIELD_SPLITS = "splits"
+    /**
+     * Since 12. Messages folded into a transaction as another channel's copy. Without them
+     * a restore listed every copy as a message no rule could read.
+     */
+    const val FIELD_TXN_COPIES = "txnCopies"
     /** Since 10. Apps whose notifications belong to a bank. */
     const val FIELD_BANK_APPS = "bankApps"
     const val FIELD_SETTINGS = "settings"

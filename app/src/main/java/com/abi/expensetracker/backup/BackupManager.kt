@@ -20,6 +20,9 @@ import com.abi.expensetracker.data.model.SenderLink
 import com.abi.expensetracker.data.model.Split
 import com.abi.expensetracker.data.model.Source
 import com.abi.expensetracker.data.model.Txn
+import com.abi.expensetracker.data.model.TxnCopy
+import androidx.room.withTransaction
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -50,10 +53,18 @@ class BackupManager(
         stream.use { write(it) }
     }
 
-    /** Written before a destructive import so there is always a way back. */
-    suspend fun exportToCache(fileName: String): File = withContext(Dispatchers.IO) {
-        val file = File(context.cacheDir, fileName)
+    /**
+     * Written before a destructive import so there is always a way back.
+     *
+     * In app storage, not the cache: the system clears the cache when space runs low,
+     * which is exactly when a phone is being set up again. Only the newest few are kept.
+     */
+    suspend fun exportSafetyCopy(fileName: String): File = withContext(Dispatchers.IO) {
+        val dir = File(context.filesDir, "pre-import").apply { mkdirs() }
+        val file = File(dir, fileName)
         file.outputStream().use { write(it) }
+        dir.listFiles()?.sortedByDescending { it.lastModified() }?.drop(SAFETY_COPIES)
+            ?.forEach { it.delete() }
         file
     }
 
@@ -68,6 +79,7 @@ class BackupManager(
         val messageFlags = db.messageFlagDao().all()
         val loans = db.loanDao().all()
         val splits = db.splitDao().all()
+        val copies = db.txnCopyDao().all()
         val lastSynced = settings.lastSyncedSmsDateOnce()
 
         JsonWriter(OutputStreamWriter(out, Charsets.UTF_8)).use { w ->
@@ -107,6 +119,15 @@ class BackupManager(
                 w.name("ruleId").valueOrNull(t.ruleId)
                 w.name("userEdited").value(t.userEdited)
                 w.name("bankId").valueOrNull(t.bankId)
+                w.endObject()
+            }
+            w.endArray()
+
+            w.name(BackupSchema.FIELD_TXN_COPIES).beginArray()
+            copies.forEach { c ->
+                w.beginObject()
+                w.name("rawId").value(c.rawId)
+                w.name("txnId").value(c.txnId)
                 w.endObject()
             }
             w.endArray()
@@ -241,9 +262,20 @@ class BackupManager(
                     "${BackupSchema.CURRENT_VERSION}"
             }
 
-            val stream = context.contentResolver.openInputStream(uri)
-                ?: error("Could not open $uri for reading")
-            stream.use { read(it, mode, declared) }
+            // Not cancelled by the screen closing, and all or nothing: the wipe and every
+            // row read after it are one transaction, so a file that breaks off halfway, or
+            // a process killed mid-import, leaves the database exactly as it was.
+            withContext(NonCancellable) {
+                val stream = context.contentResolver.openInputStream(uri)
+                    ?: error("Could not open $uri for reading")
+                val (result, lastSynced) = stream.use { input ->
+                    db.withTransaction { read(input, mode, declared) }
+                }
+                // Only a replace takes the file's inbox watermark. On a merge it could sit
+                // ahead of what this phone has read, and the next sync would skip the gap.
+                if (mode == ImportMode.REPLACE) lastSynced?.let { settings.setLastSyncedSmsDate(it) }
+                result
+            }
         }
 
     /** Scans only until schemaVersion is found, skipping the bulk arrays. */
@@ -258,11 +290,31 @@ class BackupManager(
         return 0
     }
 
+    /**
+     * File ids of categories, banks and rules mapped to their ids here, for a merge.
+     *
+     * A merge cannot keep the file's autoincrement ids: this phone's bank 3 may be Nabil
+     * where the file's is NIC Asia, and inserting over it relabelled every Nabil sender. A
+     * row is matched to one already here by name (rules by their patterns) or inserted
+     * under a new id, and everything that points at it is rewritten through this map.
+     */
+    private class Remap {
+        val categories = mutableMapOf<Long, Long>()
+        val banks = mutableMapOf<Long, Long>()
+        val rules = mutableMapOf<Long, Long>()
+    }
+
     private suspend fun read(
         input: InputStream,
         mode: ImportMode,
         schemaVersion: Int
-    ): ImportResult {
+    ): Pair<ImportResult, Long?> {
+        val merge = mode == ImportMode.MERGE
+        val remap = if (merge) Remap() else null
+        // On a merge, transactions wait until the categories and banks they point at have
+        // been mapped; the file lists them first.
+        val pendingTxns = if (merge) mutableListOf<Txn>() else null
+        val pendingCopies = mutableListOf<TxnCopy>()
         var rawCount = 0
         var txnCount = 0
         var ruleCount = 0
@@ -295,12 +347,13 @@ class BackupManager(
                 when (r.nextName()) {
                     BackupSchema.FIELD_SCHEMA_VERSION -> r.skipValue() // already validated
                     BackupSchema.FIELD_RAW_MESSAGES -> rawCount = readRawMessages(r)
-                    BackupSchema.FIELD_TRANSACTIONS -> txnCount = readTransactions(r)
-                    BackupSchema.FIELD_RULES -> ruleCount = readRules(r)
-                    BackupSchema.FIELD_CATEGORIES -> categoryCount = readCategories(r)
-                    BackupSchema.FIELD_BANKS -> bankCount = readBanks(r)
-                    BackupSchema.FIELD_SENDER_LINKS -> senderLinkCount = readSenderLinks(r)
-                    BackupSchema.FIELD_BANK_APPS -> readBankApps(r)
+                    BackupSchema.FIELD_TRANSACTIONS -> txnCount = readTransactions(r, pendingTxns)
+                    BackupSchema.FIELD_TXN_COPIES -> readTxnCopies(r, pendingCopies)
+                    BackupSchema.FIELD_RULES -> ruleCount = readRules(r, remap)
+                    BackupSchema.FIELD_CATEGORIES -> categoryCount = readCategories(r, remap)
+                    BackupSchema.FIELD_BANKS -> bankCount = readBanks(r, remap)
+                    BackupSchema.FIELD_SENDER_LINKS -> senderLinkCount = readSenderLinks(r, remap)
+                    BackupSchema.FIELD_BANK_APPS -> readBankApps(r, remap)
                     BackupSchema.FIELD_MESSAGE_FLAGS -> readMessageFlags(r)
                     BackupSchema.FIELD_SPLITS -> splitIds = readSplits(r)
                     BackupSchema.FIELD_LOANS -> readLoans(r, mode, splitIds)
@@ -315,11 +368,57 @@ class BackupManager(
             r.endObject()
         }
 
-        lastSynced?.let { settings.setLastSyncedSmsDate(it) }
+        if (pendingTxns != null && remap != null) insertMerged(pendingTxns, remap)
+        insertCopies(pendingCopies)
 
         return ImportResult(
             schemaVersion, rawCount, txnCount, ruleCount, categoryCount, bankCount, senderLinkCount
-        )
+        ) to lastSynced
+    }
+
+    /**
+     * A merge adds the file's transactions without touching this phone's: a row here may
+     * have been edited since the file was written. A message already booked here, under
+     * any id, is skipped, so builds that keyed ids differently do not book it twice.
+     */
+    private suspend fun insertMerged(txns: List<Txn>, remap: Remap) {
+        val booked = db.txnDao().bookedRawIds().toHashSet()
+        val absorbed = db.txnCopyDao().allRawIds().toHashSet()
+        val rows = txns.filter { t -> t.rawId == null || (t.rawId !in booked && t.rawId !in absorbed) }
+            .map { t ->
+                t.copy(
+                    categoryId = t.categoryId?.let { remap.categories[it] },
+                    bankId = t.bankId?.let { remap.banks[it] },
+                    ruleId = t.ruleId?.let { remap.rules[it] }
+                )
+            }
+        rows.chunked(BATCH).forEach { db.txnDao().insertAllIfAbsent(it) }
+    }
+
+    /** Copies whose message is not already a row of its own, and whose row came across. */
+    private suspend fun insertCopies(copies: List<TxnCopy>) {
+        if (copies.isEmpty()) return
+        val booked = db.txnDao().bookedRawIds().toHashSet()
+        copies.filter { it.rawId !in booked }.forEach { db.txnCopyDao().insertIfAbsent(it) }
+        db.txnCopyDao().deleteOrphans()
+    }
+
+    private fun readTxnCopies(r: JsonReader, into: MutableList<TxnCopy>) {
+        r.beginArray()
+        while (r.hasNext()) {
+            var rawId = ""; var txnId = ""
+            r.beginObject()
+            while (r.hasNext()) {
+                when (r.nextName()) {
+                    "rawId" -> rawId = r.nextString()
+                    "txnId" -> txnId = r.nextString()
+                    else -> r.skipValue()
+                }
+            }
+            r.endObject()
+            if (rawId.isNotEmpty() && txnId.isNotEmpty()) into += TxnCopy(rawId, txnId)
+        }
+        r.endArray()
     }
 
     private suspend fun readRawMessages(r: JsonReader): Int {
@@ -356,7 +455,7 @@ class BackupManager(
         return count
     }
 
-    private suspend fun readTransactions(r: JsonReader): Int {
+    private suspend fun readTransactions(r: JsonReader, pending: MutableList<Txn>?): Int {
         var count = 0
         val batch = ArrayList<Txn>(BATCH)
         r.beginArray()
@@ -422,15 +521,18 @@ class BackupManager(
                 count++
             }
             if (batch.size >= BATCH) {
-                db.txnDao().insertAll(batch.toList()); batch.clear()
+                if (pending != null) pending += batch else db.txnDao().insertAll(batch.toList())
+                batch.clear()
             }
         }
         r.endArray()
-        if (batch.isNotEmpty()) db.txnDao().insertAll(batch.toList())
+        if (batch.isNotEmpty()) {
+            if (pending != null) pending += batch else db.txnDao().insertAll(batch.toList())
+        }
         return count
     }
 
-    private suspend fun readRules(r: JsonReader): Int {
+    private suspend fun readRules(r: JsonReader, remap: Remap?): Int {
         val rules = ArrayList<Rule>()
         r.beginArray()
         while (r.hasNext()) {
@@ -462,11 +564,25 @@ class BackupManager(
             }
         }
         r.endArray()
-        if (rules.isNotEmpty()) db.ruleDao().insertAll(rules)
+        if (remap == null) {
+            if (rules.isNotEmpty()) db.ruleDao().insertAll(rules)
+            return rules.size
+        }
+        // Built-ins are this build's to define and are already here, matched by name. A
+        // user template already here with the same patterns is the same template.
+        val here = db.ruleDao().all()
+        rules.forEach { rule ->
+            val local = if (rule.builtIn) here.firstOrNull { it.builtIn && it.name == rule.name }
+            else here.firstOrNull {
+                !it.builtIn && it.bodyPattern == rule.bodyPattern && it.senderPattern == rule.senderPattern
+            }
+            remap.rules[rule.id] = local?.id
+                ?: if (rule.builtIn) return@forEach else db.ruleDao().insert(rule.copy(id = 0))
+        }
         return rules.size
     }
 
-    private suspend fun readCategories(r: JsonReader): Int {
+    private suspend fun readCategories(r: JsonReader, remap: Remap?): Int {
         val categories = ArrayList<Category>()
         r.beginArray()
         while (r.hasNext()) {
@@ -487,11 +603,19 @@ class BackupManager(
             if (name.isNotEmpty()) categories += Category(id, name, icon, keywords, color)
         }
         r.endArray()
-        if (categories.isNotEmpty()) db.categoryDao().insertAll(categories)
+        if (remap == null) {
+            if (categories.isNotEmpty()) db.categoryDao().insertAll(categories)
+            return categories.size
+        }
+        val here = db.categoryDao().all()
+        categories.forEach { category ->
+            val local = here.firstOrNull { it.name.equals(category.name, ignoreCase = true) }
+            remap.categories[category.id] = local?.id ?: db.categoryDao().insert(category.copy(id = 0))
+        }
         return categories.size
     }
 
-    private suspend fun readBanks(r: JsonReader): Int {
+    private suspend fun readBanks(r: JsonReader, remap: Remap?): Int {
         val banks = ArrayList<Bank>()
         r.beginArray()
         while (r.hasNext()) {
@@ -510,11 +634,19 @@ class BackupManager(
             if (name.isNotEmpty()) banks += Bank(id, name, icon)
         }
         r.endArray()
-        if (banks.isNotEmpty()) db.bankDao().insertAll(banks)
+        if (remap == null) {
+            if (banks.isNotEmpty()) db.bankDao().insertAll(banks)
+            return banks.size
+        }
+        val here = db.bankDao().all()
+        banks.forEach { bank ->
+            val local = here.firstOrNull { it.name.equals(bank.name, ignoreCase = true) }
+            remap.banks[bank.id] = local?.id ?: db.bankDao().insert(bank.copy(id = 0))
+        }
         return banks.size
     }
 
-    private suspend fun readBankApps(r: JsonReader) {
+    private suspend fun readBankApps(r: JsonReader, remap: Remap?) {
         val apps = ArrayList<BankApp>()
         r.beginArray()
         while (r.hasNext()) {
@@ -528,13 +660,14 @@ class BackupManager(
                 }
             }
             r.endObject()
-            if (pkg.isNotEmpty()) apps += BankApp(pkg, bankId)
+            val mapped = if (remap == null) bankId else remap.banks[bankId]
+            if (pkg.isNotEmpty() && mapped != null) apps += BankApp(pkg, mapped)
         }
         r.endArray()
         if (apps.isNotEmpty()) db.bankAppDao().insertAll(apps)
     }
 
-    private suspend fun readSenderLinks(r: JsonReader): Int {
+    private suspend fun readSenderLinks(r: JsonReader, remap: Remap?): Int {
         val links = ArrayList<SenderLink>()
         r.beginArray()
         while (r.hasNext()) {
@@ -548,10 +681,17 @@ class BackupManager(
                 }
             }
             r.endObject()
-            if (senderKey.isNotEmpty()) links += SenderLink(senderKey, bankId)
+            val mapped = if (remap == null) bankId else remap.banks[bankId]
+            if (senderKey.isNotEmpty() && mapped != null) links += SenderLink(senderKey, mapped)
         }
         r.endArray()
-        if (links.isNotEmpty()) db.senderLinkDao().insertAll(links)
+        // On a merge a sender this phone already links keeps its link: the user set it
+        // here, and the file's may be older.
+        val keep = if (remap == null) links else {
+            val linked = db.senderLinkDao().all().map { it.senderKey }.toSet()
+            links.filter { it.senderKey !in linked }
+        }
+        if (keep.isNotEmpty()) db.senderLinkDao().insertAll(keep)
         return links.size
     }
 
@@ -616,6 +756,10 @@ class BackupManager(
         val existing = if (mode == ImportMode.MERGE) {
             db.loanDao().all().map { listOf(it.person, it.kind, it.amountMinor, it.occurredAt) }.toSet()
         } else emptySet()
+        // A transaction carries one loan entry, and on a merge this phone's wins.
+        val linkedHere = if (mode == ImportMode.MERGE) {
+            db.loanDao().all().mapNotNull { it.txnId }.toSet()
+        } else emptySet()
         val loans = ArrayList<LoanEntry>()
         r.beginArray()
         while (r.hasNext()) {
@@ -637,14 +781,13 @@ class BackupManager(
             r.endObject()
             val k = kind ?: continue
             if (person.isEmpty() || listOf(person, k, amount, at) in existing) continue
+            if (mode == ImportMode.MERGE && txnId != null && txnId in linkedHere) continue
             loans += LoanEntry(
                 person = person, kind = k, amountMinor = amount, occurredAt = at, note = note,
                 txnId = txnId, splitId = splitId?.let { splitIds[it] }
             )
         }
         r.endArray()
-        // A transaction carries one loan entry; where the file and this phone both link
-        // the same one, REPLACE lets the file's entry win rather than failing the import.
         if (loans.isNotEmpty()) db.loanDao().insertAll(loans)
     }
 
@@ -663,6 +806,7 @@ class BackupManager(
 
     private companion object {
         const val BATCH = 500
+        const val SAFETY_COPIES = 3
     }
 }
 

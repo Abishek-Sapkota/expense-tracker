@@ -110,6 +110,9 @@ interface TxnDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIfAbsent(txn: Txn): Long
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAllIfAbsent(txns: List<Txn>)
+
     @Update
     suspend fun update(txn: Txn)
 
@@ -251,6 +254,12 @@ interface TxnCopyDao {
 
     @Query("SELECT rawId FROM txn_copies")
     suspend fun allRawIds(): List<String>
+
+    @Query("SELECT * FROM txn_copies")
+    suspend fun all(): List<TxnCopy>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIfAbsent(copy: TxnCopy)
 
     @Query(
         "SELECT c.txnId AS txnId, r.sender AS sender FROM txn_copies c " +
