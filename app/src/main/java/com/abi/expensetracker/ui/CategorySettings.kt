@@ -1,5 +1,7 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.foundation.text.KeyboardOptions
 import com.abi.expensetracker.ui.theme.AppTheme
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
@@ -164,6 +166,7 @@ private fun CategoryEditorDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Name") },

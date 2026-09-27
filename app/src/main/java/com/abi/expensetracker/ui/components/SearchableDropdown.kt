@@ -1,5 +1,7 @@
 package com.abi.expensetracker.ui.components
 
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -70,6 +72,7 @@ fun <T> SearchableDropdown(
         modifier = modifier
     ) {
         OutlinedTextField(
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             // Closed, it states the choice; open, it is the search box. One control, so
             // there is no moment where the thing under your finger changes meaning.
             value = if (expanded) query else selectedLabel,

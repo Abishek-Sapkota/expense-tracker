@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -768,6 +769,7 @@ private fun ExpenseDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     value = remark,
                     onValueChange = { remark = it },
                     label = { Text("Spent on") },

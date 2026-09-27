@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -114,6 +115,7 @@ internal fun SplitBillDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState())
             ) {
                 OutlinedTextField(
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     value = title,
                     onValueChange = { title = it },
                     label = { Text("What for") },
@@ -127,7 +129,10 @@ internal fun SplitBillDialog(
                     label = { Text("Add a person") },
                     singleLine = true,
                     shape = MaterialTheme.shapes.small,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Done
+                    ),
                     keyboardActions = KeyboardActions(onDone = { add(adding) }),
                     trailingIcon = {
                         Row {

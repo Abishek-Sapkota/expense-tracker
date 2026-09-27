@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.abi.expensetracker.ui.components.SyncSmsControl
 import com.abi.expensetracker.ui.components.rememberPostNotificationsState
@@ -280,6 +281,7 @@ fun AccountsScreen(
                         onClick = { pickingNewBankIcon = true }
                     )
                     OutlinedTextField(
+                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                         value = newBankName,
                         onValueChange = { newBankName = it },
                         label = { Text("Name, e.g. Nabil or eSewa") },
@@ -452,6 +454,7 @@ private fun AppIconPicker(selected: String?, onPick: (String?) -> Unit) {
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             value = query,
             onValueChange = { query = it },
             label = { Text("Search apps") },
@@ -768,6 +771,7 @@ private fun SenderSearchSheet(
             // Right here, so a sender that has not been read yet is one tap away.
             SyncSmsControl(syncing = syncing, status = syncStatus, onSync = onSync)
             OutlinedTextField(
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 value = query,
                 onValueChange = onQuery,
                 label = { Text("Search messages and senders") },

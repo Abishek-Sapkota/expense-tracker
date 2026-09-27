@@ -1,5 +1,7 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.foundation.text.KeyboardOptions
 import com.abi.expensetracker.data.SenderNormalizer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
@@ -217,6 +219,7 @@ fun TemplatesScreen(
                         PreviewCard(preview)
 
                         OutlinedTextField(
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                             value = name,
                             onValueChange = { name = it },
                             label = { Text("Template name") },

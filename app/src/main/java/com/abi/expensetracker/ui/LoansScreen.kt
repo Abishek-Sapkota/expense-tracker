@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.abi.expensetracker.ui.theme.ChipShape
 import androidx.compose.foundation.shape.CircleShape
@@ -590,6 +591,7 @@ internal fun LoanEntryDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState())
             ) {
                 OutlinedTextField(
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                     value = person,
                     onValueChange = { person = it },
                     label = { Text("Person") },
@@ -649,6 +651,7 @@ internal fun LoanEntryDialog(
                     }
                 }
                 OutlinedTextField(
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     value = note,
                     onValueChange = { note = it },
                     label = { Text("Note") },
