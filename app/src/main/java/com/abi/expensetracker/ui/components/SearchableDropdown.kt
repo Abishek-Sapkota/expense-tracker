@@ -1,5 +1,15 @@
 package com.abi.expensetracker.ui.components
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Surface
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.Popup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
@@ -13,7 +23,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +35,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import android.os.SystemClock
+import android.view.WindowManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateOf
@@ -138,50 +148,83 @@ fun <T> SearchableDropdown(
                 .onGloballyPositioned { fieldWidth = it.size.width }
         )
 
-        DropdownMenu(
-            expanded = expanded,
-            // A tap outside closes it, except a tap on the field itself, which reaches the
-            // list as an outside touch too and would otherwise shut it on the second tap.
-            onDismissRequest = {
-                scope.launch {
-                    delay(150)
-                    if (SystemClock.uptimeMillis() - fieldPressedAt > 400) close()
-                }
-            },
-            // Not focusable, so the keyboard's typing reaches the field while it is open.
-            properties = PopupProperties(focusable = false),
-            modifier = Modifier
-                .width(with(LocalDensity.current) { fieldWidth.toDp() })
-                .heightIn(max = 320.dp)
-        ) {
-            if (offerCreate) {
-                DropdownMenuItem(
-                    text = { Text("Create \u201c$typed\u201d", color = MaterialTheme.colorScheme.primary) },
-                    leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    onClick = {
-                        onCreate?.invoke(typed)
-                        close()
+        if (expanded) {
+            Popup(
+                popupPositionProvider = BelowAnchor,
+                onDismissRequest = {
+                    // A tap outside closes it, except a tap on the field itself, which
+                    // reaches the list as an outside touch too and would otherwise shut
+                    // it on the second tap.
+                    scope.launch {
+                        delay(150)
+                        if (SystemClock.uptimeMillis() - fieldPressedAt > 400) close()
                     }
+                },
+                // Not focusable, so the keyboard's typing reaches the field. A
+                // non-focusable window sits above the keyboard by default and covered its
+                // keys; ALT_FOCUSABLE_IM puts it behind. NO_LIMITS lets it run on under
+                // the keyboard instead of being shifted up over the field.
+                properties = PopupProperties(
+                    flags = WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
                 )
-            }
-            if (matches.isEmpty() && !offerCreate) {
-                Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    Text(
-                        emptyText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            matches.forEach { item ->
-                DropdownMenuItem(
-                    text = { Text(itemLabel(item)) },
-                    onClick = {
-                        onSelect(item)
-                        close()
+            ) {
+                Surface(
+                    shape = MaterialTheme.shapes.extraSmall,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shadowElevation = 3.dp,
+                    tonalElevation = 3.dp,
+                    modifier = Modifier.width(with(LocalDensity.current) { fieldWidth.toDp() })
+                ) {
+                    Column(
+                        Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())
+                            .padding(vertical = 8.dp)
+                    ) {
+                        if (matches.isEmpty() && !offerCreate) {
+                            Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                                Text(
+                                    emptyText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        matches.forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(itemLabel(item)) },
+                                onClick = {
+                                    onSelect(item)
+                                    close()
+                                }
+                            )
+                        }
+                        // After the matches: the strip above the keyboard shows the
+                        // closest existing item first, and creating is the fallback.
+                        if (offerCreate) {
+                            DropdownMenuItem(
+                                text = { Text("Create \u201c$typed\u201d", color = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                onClick = {
+                                    onCreate?.invoke(typed)
+                                    close()
+                                }
+                            )
+                        }
                     }
-                )
+                }
             }
         }
     }
+}
+
+/** Always directly under the field, left edges aligned: never flipped or shifted over it. */
+private object BelowAnchor : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize
+    ): IntOffset = IntOffset(anchorBounds.left, anchorBounds.bottom)
 }
