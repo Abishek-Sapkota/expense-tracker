@@ -79,7 +79,8 @@ convention listed here, update the matching line in the same change.
 - `sms/` — `SmsInboxReader` (history backfill), `SmsReceiver` (live).
 - `notification/` — `TxnNotificationListener` (`ensureBound` on every process start and
   `requestRebind` on disconnect, since the system can leave a granted listener unbound
-  after an update/kill; on connect it ingests what is still in the shade), `NotificationIngest`, `RemarkPrompt` +
+  after an update/kill; while bound it watches `observeReadNotificationApps()` and books
+  what a newly read app (or all apps, on connect) still has in the shade), `NotificationIngest`, `RemarkPrompt` +
   `RemarkReplyReceiver` (inline reply to add a remark). Asked per `RemarkPromptPolicy`: one
   app-wide setting `askUncategorised` (default on, switch in Accounts) for any new debit no
   category matched; the reply becomes the remark and is run through keywords. The listener
@@ -168,7 +169,8 @@ Tests: `app/src/test/java/com/abi/expensetracker/{data,parser,notification,ui}/`
 - ViewModels are `AndroidViewModel`, get repository via `ServiceLocator`, expose
   `StateFlow` collected with `collectAsStateWithLifecycle`.
 - Schema change: bump `AppDatabase.version`, add a `Migration`, keep exported schema JSON.
-- Parsing/dedup logic change: bump `PARSER_VERSION` in `ExpenseRepository.kt`.
+- Parsing/dedup logic change: bump `PARSER_VERSION` in `ExpenseRepository.kt` — again if a
+  build with the current number was already installed, or the phone never reparses.
 - Battery: `ExpenseApp` startup maintenance (dedupe, rule sync, reparse, categorize) runs
   once per install/update (`maintenanceStamp` = package `lastUpdateTime`), not on every
   process start — the process also starts in background for each SMS/notification. Never

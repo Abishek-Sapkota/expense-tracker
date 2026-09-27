@@ -20,7 +20,7 @@ object FieldExtractors {
     )
 
     private val BALANCE = Regex(
-        """(?i)\b(?:avl|avbl|available|clear|closing)\s*(?:bal|balance)\b[:.\s]*(?:rs\.?|npr|रु|रू)?\s*([\d,]+(?:\.\d{1,2})?)"""
+        """(?i)\b(?:avl|avbl|available|clear|closing)\s*(?:bal|balance)\b[:.\s]*(?:rs\.?|npr\.?|रु|रू)?\s*([\d,]+(?:\.\d{1,2})?)"""
     )
 
     /**
@@ -69,6 +69,18 @@ object FieldExtractors {
      * first word that starts a new clause. Misses land in the review queue by design —
      * a wrong merchant silently attached to a transaction is worse than a blank one.
      */
+    /**
+     * Who sent money in: "received NPR. 1700.0 from NABIL BANK LTD. in your eSewa account".
+     * Only for credits, where "from" names the other side; on a debit it is the user's own
+     * account ("debited from a/c ..."), which is why [merchant] stops at it.
+     */
+    private val PAYER = Regex(
+        """(?i)\bfrom\s+(?!(?:a/?c|ac|acct|account|your|card)\b)([A-Za-z][A-Za-z0-9.&'\- ]{1,40}?)(?=\s+(?:in|to|on|for|via|with|at)\b|[,;]|\.\s|\.?$)"""
+    )
+
+    fun payer(body: String): String? =
+        PAYER.find(body)?.groupValues?.get(1)?.trim()?.trimEnd('.', ',')?.ifBlank { null }
+
     fun merchant(body: String): String? {
         val captured = MERCHANT.find(body)?.groupValues?.get(1) ?: return null
         val words = captured.split(" ")

@@ -264,6 +264,16 @@ class SmsParserTest {
         val txn = (parse("Rs 500.00 debited from A/C XX1234 on 20/09/2026 at 10:30 AM") as ParseOutcome.Parsed).txn
         assertFalse(txn.merchant == "10")
     }
+
+    @Test
+    fun `reads eSewa's NPR with a dot`() {
+        val body = "NABIL BANK LTD. Dear Muna,\nYou have received NPR. 1700.0 from NABIL BANK LTD. in your eSewa account.\nThank you.\neSewa."
+        assertTrue(com.abi.expensetracker.notification.NotificationIngest.looksFinancial(body))
+        val txn = (parser.parse(message(body, sender = "com.f1soft.esewa")) as ParseOutcome.Parsed).txn
+        assertEquals(170_000L, txn.amountMinor)
+        assertEquals(Direction.CREDIT, txn.direction)
+        assertEquals("NABIL BANK LTD", txn.merchant)
+    }
 }
 
 class MoneyTest {

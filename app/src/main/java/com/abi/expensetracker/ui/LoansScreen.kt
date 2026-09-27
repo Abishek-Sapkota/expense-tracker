@@ -611,7 +611,12 @@ internal fun LoanEntryDialog(
                         }
                     }
                 }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // One scrollable line, not a wrapping block: four pills wrapped onto two
+                // rows in a dialog, and the second row read as a separate choice.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                ) {
                     kinds.forEach { k ->
                         ChoicePill(label = k.label, selected = k == kind, onClick = { kind = k })
                     }

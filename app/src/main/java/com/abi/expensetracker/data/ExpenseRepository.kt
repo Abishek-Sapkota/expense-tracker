@@ -60,7 +60,7 @@ private const val HISTORY_DUPLICATE_WINDOW_MILLIS = 6 * 60 * 60 * 1000L
  * Bump when parsing or de-duplication logic changes, so the next start reparses stored
  * messages under the new logic instead of leaving history as the old code read it.
  */
-const val PARSER_VERSION = 4
+const val PARSER_VERSION = 6
 
 class ExpenseRepository(
     private val context: Context,
@@ -162,6 +162,12 @@ class ExpenseRepository(
         settings.notificationApps.first() ?: seedNotificationApps()
 
     /** Whether a notification from [packageName] is stored: switch on and the app picked. */
+    /** The apps actually read right now: the picked list, or none while the switch is off. */
+    fun observeReadNotificationApps(): Flow<Set<String>> =
+        combine(observeNotificationApps(), settings.readAppNotifications) { apps, on ->
+            if (on) apps else emptySet()
+        }
+
     suspend fun readsNotificationsFrom(packageName: String): Boolean =
         settings.readAppNotifications.first() && packageName in notificationAppsOnce()
 

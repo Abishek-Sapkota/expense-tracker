@@ -15,8 +15,8 @@ object NotificationIngest {
 
     /** Currency-tagged amount, in the forms Nepali banks and wallets actually post. */
     private val AMOUNT = Regex(
-        """(?i)(?:(?:rs\.?|npr|inr|रु|रू|₹)\s*[\d,]+(?:\.\d{1,2})?""" +
-            """|[\d,]+(?:\.\d{1,2})?\s*(?:rs\.?|npr|रु|रू))"""
+        """(?i)(?:(?:rs\.?|npr\.?|inr|रु|रू|₹)\s*[\d,]+(?:\.\d{1,2})?""" +
+            """|[\d,]+(?:\.\d{1,2})?\s*(?:rs\.?|npr\.?|रु|रू))"""
     )
 
     /** A word that makes the amount a transaction rather than a price or an OTP. */

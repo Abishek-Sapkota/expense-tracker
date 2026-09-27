@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 /**
  * Books transactions from bank and wallet notifications.
@@ -53,22 +54,43 @@ class TxnNotificationListener : NotificationListenerService() {
      * books a row twice nor asks about it again.
      */
     override fun onListenerConnected() {
+        val repository = ServiceLocator.repository(applicationContext)
+        watchApps?.cancel()
+        watchApps = scope.launch {
+            // Each time the set of read apps grows (an app picked in Accounts, or reading
+            // switched back on), book what those apps still have in the shade: the user
+            // adds eSewa because a payment just came in from it, and that notification
+            // was posted before the app was on the list. The first set is everything read
+            // now, which also covers what arrived while the listener was unbound.
+            var reading = emptySet<String>()
+            repository.observeReadNotificationApps().collect { apps ->
+                val added = apps - reading
+                reading = apps
+                if (added.isNotEmpty()) bookActive(added)
+            }
+        }
+    }
+
+    /**
+     * Books the money notifications of [packages] that are still in the shade. Anything
+     * already stored is dropped by the ingest guard before parsing, so this never books a
+     * row twice or asks about it again.
+     */
+    private suspend fun bookActive(packages: Set<String>) {
         val active = try {
             activeNotifications
         } catch (e: SecurityException) {
-            // Access revoked between the bind and this call.
+            // Access revoked, or the listener unbound between the change and this call.
             return
         } ?: return
-        val repository = ServiceLocator.repository(applicationContext)
-        val candidates = active.mapNotNull { sbn -> toMessage(sbn)?.let { sbn.packageName to it } }
-        if (candidates.isEmpty()) return
-        scope.launch {
-            val messages = candidates
-                .filter { (pkg, _) -> repository.readsNotificationsFrom(pkg) }
-                .map { it.second }
-            if (messages.isNotEmpty()) repository.ingest(messages)
-        }
+        val messages = active
+            .filter { it.packageName in packages }
+            .mapNotNull { toMessage(it) }
+        if (messages.isNotEmpty()) ServiceLocator.repository(applicationContext).ingest(messages)
     }
+
+    /** The watch on the read-apps setting; lives while the system has the listener bound. */
+    private var watchApps: Job? = null
 
     /**
      * The system unbinds a listener when its process dies or the app is updated, and does
@@ -76,6 +98,8 @@ class TxnNotificationListener : NotificationListenerService() {
      * Asking for the rebind here covers the case where the system tells us.
      */
     override fun onListenerDisconnected() {
+        watchApps?.cancel()
+        watchApps = null
         requestRebind(ComponentName(this, TxnNotificationListener::class.java))
     }
 

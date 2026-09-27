@@ -15,7 +15,8 @@ object DefaultRules {
 
     private const val ANY_SENDER = """.*"""
     private const val AMOUNT = """(?<amount>[\d,]+(?:\.\d{1,2})?)"""
-    private const val CUR = """(?:rs\.?|npr|रु|रू)"""
+    // "NPR." with a dot too: eSewa writes "received NPR. 1700.0".
+    private const val CUR = """(?:rs\.?|npr\.?|रु|रू)"""
     private const val AUX = """(?:(?:has|have|is|was|been)\s+)*"""
 
     /**

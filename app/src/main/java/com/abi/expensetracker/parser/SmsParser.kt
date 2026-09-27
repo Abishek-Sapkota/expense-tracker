@@ -89,6 +89,9 @@ class SmsParser(
             val body = message.body
             val accountTail = match.namedOrNull("acct") ?: FieldExtractors.accountTail(body)
             val merchant = match.namedOrNull("merchant") ?: FieldExtractors.merchant(body)
+                ?: if (c.rule.direction == com.abi.expensetracker.data.model.Direction.CREDIT) {
+                    FieldExtractors.payer(body)
+                } else null
             val remark = match.namedOrNull("remark") ?: FieldExtractors.remark(body)
             val refNumber = match.namedOrNull("ref") ?: FieldExtractors.refNumber(body)
             val balanceMinor = match.namedOrNull("balance")?.let { Money.parseToMinor(it) }
