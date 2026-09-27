@@ -122,6 +122,12 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
 }
 
+// Unit tests run against the debug variant only: the release variant would run the same
+// tests again, minus the schema assets the migration test needs.
+androidComponents {
+    beforeVariants(selector().withBuildType("release")) { it.enableUnitTest = false }
+}
+
 // Fail an unsigned release loudly rather than leave an unsigned APK to be missed.
 tasks.matching { it.name == "assembleRelease" || it.name == "installRelease" }.configureEach {
     doFirst {
