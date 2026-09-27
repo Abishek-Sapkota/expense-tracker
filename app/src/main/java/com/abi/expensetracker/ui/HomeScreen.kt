@@ -612,6 +612,7 @@ private fun TransactionTile(
         row.loan?.splitId != null -> "Share"
         row.loan != null -> "Loan"
         row.split != null -> "Split"
+        txn.isTransfer -> "Transfer"
         txn.needsReview -> "Review"
         else -> null
     }
@@ -737,7 +738,8 @@ private fun DayHeader(day: LocalDate, rows: List<TxnRow>, nepaliDates: Boolean) 
         else -> CalendarDates.dayLabel(day, nepaliDates)
     }
     // Loans are left out, as in every total; the rows still list them.
-    val spent = rows.filter { it.txn.direction == Direction.DEBIT && it.loan == null }.sumOf { it.txn.amountMinor }
+    val spent = rows.filter { it.txn.direction == Direction.DEBIT && it.loan == null && !it.txn.isTransfer }
+        .sumOf { it.txn.amountMinor }
     Row(
         Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 16.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically

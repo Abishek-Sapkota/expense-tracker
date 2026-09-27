@@ -40,10 +40,13 @@ convention listed here, update the matching line in the same change.
   `LoanEntry` + `LoanKind` (LENT/RECEIVED_BACK/BORROWED/PAID_BACK; free-text `person`;
   optional unique `txnId` link; `splitId` for split shares/repayments; backup since schema 8),
   `Split` (bill txn split with friends: title, total, myShare; backup since schema 9),
-  `BankApp` (legacy packageName+bankId from the old per-account app chips; no longer
+  `Bank.walletIds` (user's own wallet IDs, comma separated; schema 14) and `Txn.isTransfer`
+  (debit loading one of them, set by `TransferDetector` on booking and by
+  `ExpenseRepository.setWalletIds` over history; excluded from spending like loans; backup
+  schema 13), `BankApp` (legacy packageName+bankId from the old per-account app chips; no longer
   read for resolution, only to seed `SettingsStore.notificationApps` once and for old
   backups; backup since schema 10).
-- `data/db/` — `AppDatabase` (version 13, migrations 1→13 inline; schemas in
+- `data/db/` — `AppDatabase` (version 14, migrations 1→14 inline; schemas in
   `app/schemas/`), `Daos.kt` (all DAOs; spent/received/debits/category-total queries exclude
   txns linked to a loan entry), `TxnWithSender` + query result classes.
 - `data/ExpenseRepository.kt` — single data API used by ViewModels (ingest, reparse,
@@ -150,7 +153,7 @@ convention listed here, update the matching line in the same change.
   Monogram, banners), `SearchableDropdown` (generic filterable dropdown; nullable item
   for "none" row; optional `onCreate` row), `AppIcon`, `Permissions`.
 - `ui/AccountsScreen.kt` + VM — opened from Settings: banks in one card (⋮ menu: Change
-  icon, Delete account), one "Notifications" card (`NotificationsCard`: "Read app
+  icon, Wallet IDs (`WalletIdsDialog`, suggests IDs seen in messages), Delete account), one "Notifications" card (`NotificationsCard`: "Read app
   notifications" switch revealing app chips + App → `AppChooserDialog` and an Allow access
   hint; "Ask what it was for" switch + Allow notifications hint), then linked SMS senders
   (search is SMS senders only).

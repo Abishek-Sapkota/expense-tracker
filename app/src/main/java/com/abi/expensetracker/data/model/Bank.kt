@@ -17,7 +17,13 @@ import androidx.room.PrimaryKey
 data class Bank(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val icon: String? = null
+    val icon: String? = null,
+    /**
+     * The user's own IDs on this wallet (usually the phone number), comma separated; null
+     * for a bank. A bank debit naming one is a transfer to themselves, not spending. See
+     * [com.abi.expensetracker.data.TransferDetector].
+     */
+    val walletIds: String? = null
 )
 
 /**

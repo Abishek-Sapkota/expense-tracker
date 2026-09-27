@@ -121,6 +121,7 @@ class BackupManager(
                 w.name("ruleId").valueOrNull(t.ruleId)
                 w.name("userEdited").value(t.userEdited)
                 w.name("bankId").valueOrNull(t.bankId)
+                w.name("isTransfer").value(t.isTransfer)
                 w.endObject()
             }
             w.endArray()
@@ -171,6 +172,7 @@ class BackupManager(
                 w.name("id").value(b.id)
                 w.name("name").value(b.name)
                 w.name("icon").valueOrNull(b.icon)
+                w.name("walletIds").valueOrNull(b.walletIds)
                 w.endObject()
             }
             w.endArray()
@@ -471,6 +473,7 @@ class BackupManager(
             var needsReview = false; var ruleId: Long? = null
             var userEdited = false
             var bankId: Long? = null
+            var isTransfer = false
 
             r.beginObject()
             while (r.hasNext()) {
@@ -494,6 +497,7 @@ class BackupManager(
                     "userEdited" -> userEdited = r.nextBoolean()
                     // Absent before schema 11, when a manual entry named no account.
                     "bankId" -> bankId = r.nextLongOrNull()
+                    "isTransfer" -> isTransfer = r.nextBoolean()
                     else -> r.skipValue()
                 }
             }
@@ -518,7 +522,8 @@ class BackupManager(
                     needsReview = needsReview,
                     ruleId = ruleId,
                     userEdited = userEdited,
-                    bankId = bankId
+                    bankId = bankId,
+                    isTransfer = isTransfer
                 )
                 count++
             }
@@ -621,7 +626,7 @@ class BackupManager(
         val banks = ArrayList<Bank>()
         r.beginArray()
         while (r.hasNext()) {
-            var id = 0L; var name = ""; var icon: String? = null
+            var id = 0L; var name = ""; var icon: String? = null; var walletIds: String? = null
             r.beginObject()
             while (r.hasNext()) {
                 when (r.nextName()) {
@@ -629,11 +634,13 @@ class BackupManager(
                     "name" -> name = r.nextString()
                     // Absent in schema 3 and older, where a bank had no icon.
                     "icon" -> icon = r.nextStringOrNull()
+                    // Absent before schema 13, when no account knew its wallet IDs.
+                    "walletIds" -> walletIds = r.nextStringOrNull()
                     else -> r.skipValue()
                 }
             }
             r.endObject()
-            if (name.isNotEmpty()) banks += Bank(id, name, icon)
+            if (name.isNotEmpty()) banks += Bank(id, name, icon, walletIds)
         }
         r.endArray()
         if (remap == null) {

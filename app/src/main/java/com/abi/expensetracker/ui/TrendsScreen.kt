@@ -284,7 +284,7 @@ private fun MonthTotalCard(state: TrendsState) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            if (state.loanExcludedMinor > 0 || state.recoveredMinor > 0) {
+            if (state.loanExcludedMinor > 0 || state.recoveredMinor > 0 || state.transferExcludedMinor > 0) {
                 Surface(
                     shape = MaterialTheme.shapes.small,
                     color = MaterialTheme.colorScheme.surfaceContainer,
@@ -298,6 +298,7 @@ private fun MonthTotalCard(state: TrendsState) {
                         // Only the parts that moved the total: "₹0.00 recovered" is noise.
                         val parts = listOfNotNull(
                             state.loanExcludedMinor.takeIf { it > 0 }?.let { "${Money.format(it)} in loans" },
+                            state.transferExcludedMinor.takeIf { it > 0 }?.let { "${Money.format(it)} moved to your own wallets" },
                             state.recoveredMinor.takeIf { it > 0 }?.let { "${Money.format(it)} recovered from splits" }
                         )
                         Text(

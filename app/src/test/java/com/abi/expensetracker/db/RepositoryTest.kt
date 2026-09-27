@@ -155,4 +155,30 @@ class RepositoryTest {
         assertEquals(listOf(dining, dining), db.txnDao().all().map { it.categoryId })
         assertEquals(dining, repo.likelyCategory(db.txnDao().all().last()))
     }
+
+    @Test
+    fun `setting a wallet ID turns loads to it into transfers, out of spending`() = runBlocking {
+        val esewa = db.bankDao().insert(com.abi.expensetracker.data.model.Bank(name = "Esewa"))
+        repo.ingest(
+            listOf(
+                sms("Your  Esewa Wallet Load for 9866550884 of 3200.00 is successful on 13-Sep-2026 20:07:33 .", 10 * hour, "NMB_ALERT"),
+                sms("Your  Esewa Wallet Load for 9823083036 of 300.00 is successful on 13-Sep-2026 21:07:33 .", 11 * hour, "NMB_ALERT")
+            ),
+            prompt = false
+        )
+        // No template for these in the default rules: add the one the owner uses.
+        if (db.txnDao().all().isEmpty()) {
+            repo.addTemplateRule("NMB wallet load", "NMB_ALERT",
+                "Your {merchant} load for {any} of {amount} is successful on {date} {time}", Direction.DEBIT)
+            repo.reparseAll()
+        }
+        val bank = db.bankDao().all().first { it.id == esewa }
+        assertEquals(1, repo.setWalletIds(bank, "9866550884"))
+        val range = com.abi.expensetracker.data.DateRange(0, Long.MAX_VALUE)
+        assertEquals(30_000L, repo.observeSpentBetween(range).first())
+        assertEquals(320_000L, repo.observeTransfersBetween(range).first())
+        // A new load to the same wallet is a transfer from the start.
+        repo.ingest(listOf(sms("Your  Esewa Wallet Load for 9866550884 of 50.00 is successful on 13-Sep-2026 22:07:33 .", 12 * hour, "NMB_ALERT")), prompt = false)
+        assertEquals(325_000L, repo.observeTransfersBetween(range).first())
+    }
 }

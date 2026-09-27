@@ -19,5 +19,7 @@ object RemarkPromptPolicy {
      * filed has nothing to ask about.
      */
     fun shouldAsk(txn: Txn, askUncategorised: Boolean): Boolean =
-        askUncategorised && txn.direction == Direction.DEBIT && txn.categoryId == null
+        askUncategorised && txn.direction == Direction.DEBIT && txn.categoryId == null &&
+            // Loading your own wallet is not a purchase; there is nothing to name.
+            !txn.isTransfer
 }

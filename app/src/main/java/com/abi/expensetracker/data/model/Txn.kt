@@ -1,5 +1,6 @@
 package com.abi.expensetracker.data.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -68,7 +69,14 @@ data class Txn(
      * resolved at display time, so linking a sender relabels history without a reparse —
      * storing it here too would freeze whichever answer was true on the day of parsing.
      */
-    val bankId: Long? = null
+    val bankId: Long? = null,
+    /**
+     * True when this debit loaded one of the user's own wallets. Derived from the wallet
+     * IDs set in Accounts, on every booking and whenever those IDs change, and left out of
+     * spending like a loan.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val isTransfer: Boolean = false
 ) {
     val isManual: Boolean get() = rawId == null
 

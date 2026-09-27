@@ -47,6 +47,8 @@ data class TrendsState(
     val recordedDays: Int = 0,
     /** Money out this month that was marked as a loan, and so is not in [totalMinor]. */
     val loanExcludedMinor: Long = 0L,
+    /** Money moved into the user's own wallets this month, also not in [totalMinor]. */
+    val transferExcludedMinor: Long = 0L,
     /** What friends have paid back on this month's split bills, taken off [totalMinor]. */
     val recoveredMinor: Long = 0L
 ) {
@@ -127,9 +129,10 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
             repository.observeCategories(),
             combine(
                 repository.observeSplitRecoveries(window.range),
-                repository.observeLoanDebitsBetween(window.range)
-            ) { recoveries, loans -> recoveries to loans }
-        ) { debits, previousTotal, rawTotals, categoryList, (recoveries, loanDebits) ->
+                repository.observeLoanDebitsBetween(window.range),
+                repository.observeTransfersBetween(window.range)
+            ) { recoveries, loans, transfers -> Triple(recoveries, loans, transfers) }
+        ) { debits, previousTotal, rawTotals, categoryList, (recoveries, loanDebits, transfers) ->
             // What friends paid back on a split bill comes off that bill's day and
             // category, so Dining shows the user's own share once everyone has paid.
             val recoveredByCategory = recoveries.groupBy { it.categoryId }
@@ -193,6 +196,7 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
                 categories = slices,
                 recordedDays = byDay.count { it > 0L },
                 loanExcludedMinor = loanDebits,
+                transferExcludedMinor = transfers,
                 recoveredMinor = recoveries.sumOf { it.recoveredMinor }
             )
         }

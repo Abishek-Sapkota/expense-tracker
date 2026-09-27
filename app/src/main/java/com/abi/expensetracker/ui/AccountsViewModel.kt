@@ -183,6 +183,18 @@ class AccountsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteBank(bankId: Long) = viewModelScope.launch { repository.deleteBank(bankId) }
 
+    suspend fun suggestWalletIds(bank: Bank): List<Pair<String, Int>> = repository.suggestWalletIds(bank)
+
+    /** The outcome of the last wallet-ID change, shown under the accounts. */
+    private val _walletStatus = MutableStateFlow<String?>(null)
+    val walletStatus: StateFlow<String?> = _walletStatus.asStateFlow()
+
+    fun setWalletIds(bank: Bank, text: String) = viewModelScope.launch {
+        val transfers = repository.setWalletIds(bank, text)
+        _walletStatus.value = if (transfers == 0) "Wallet IDs saved. No payments load them."
+        else "Wallet IDs saved. $transfers payment${if (transfers == 1) "" else "s"} into your own wallets now count as transfers, not spending."
+    }
+
     fun link(senderKey: String, bankId: Long) =
         viewModelScope.launch { repository.linkSender(senderKey, bankId) }
 

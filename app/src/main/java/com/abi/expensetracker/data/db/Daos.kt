@@ -76,6 +76,10 @@ interface RawMessageDao {
     @Query("SELECT * FROM raw_messages WHERE id = :id")
     suspend fun byId(id: String): RawMessage?
 
+    /** Message texts naming [name], for suggesting a wallet's own ID. */
+    @Query("SELECT body FROM raw_messages WHERE body LIKE '%' || :name || '%'")
+    suspend fun bodiesMentioning(name: String): List<String>
+
     /**
      * Newest messages that produced nothing: no transaction, not folded in as a duplicate,
      * not deleted by the user. The template screen offers the financial ones from linked
@@ -134,7 +138,7 @@ interface TxnDao {
     /** Half-open range: [from, to). An inclusive end would double-count midnight. */
     @Query(
         "SELECT COALESCE(SUM(amountMinor), 0) FROM transactions " +
-            "WHERE direction = 'DEBIT' AND occurredAt >= :from AND occurredAt < :to " +
+            "WHERE direction = 'DEBIT' AND occurredAt >= :from AND occurredAt < :to AND isTransfer = 0 " +
             "AND id NOT IN (SELECT txnId FROM loan_entries WHERE txnId IS NOT NULL)"
     )
     fun observeSpentBetween(from: Long, to: Long): Flow<Long>
@@ -159,7 +163,7 @@ interface TxnDao {
     /** Debits only, oldest first: the series the trends chart plots. */
     @Query(
         "SELECT * FROM transactions " +
-            "WHERE direction = 'DEBIT' AND occurredAt >= :from AND occurredAt < :to " +
+            "WHERE direction = 'DEBIT' AND occurredAt >= :from AND occurredAt < :to AND isTransfer = 0 " +
             "AND id NOT IN (SELECT txnId FROM loan_entries WHERE txnId IS NOT NULL)" + " ORDER BY occurredAt ASC"
     )
     fun observeDebitsBetween(from: Long, to: Long): Flow<List<Txn>>
@@ -168,7 +172,7 @@ interface TxnDao {
     @Query(
         "SELECT categoryId AS categoryId, COALESCE(SUM(amountMinor), 0) AS totalMinor " +
             "FROM transactions " +
-            "WHERE direction = 'DEBIT' AND occurredAt >= :from AND occurredAt < :to " +
+            "WHERE direction = 'DEBIT' AND occurredAt >= :from AND occurredAt < :to AND isTransfer = 0 " +
             "AND id NOT IN (SELECT txnId FROM loan_entries WHERE txnId IS NOT NULL)" + " GROUP BY categoryId ORDER BY totalMinor DESC"
     )
     fun observeCategoryTotals(from: Long, to: Long): Flow<List<CategoryTotal>>
@@ -182,7 +186,7 @@ interface TxnDao {
             "LEFT JOIN raw_messages r ON r.id = t.rawId " +
             "WHERE t.direction = 'DEBIT' AND t.occurredAt >= :from AND t.occurredAt < :to " +
             "AND ((:categoryId IS NULL AND t.categoryId IS NULL) OR t.categoryId = :categoryId) " +
-            "AND t.id NOT IN (SELECT txnId FROM loan_entries WHERE txnId IS NOT NULL) " +
+            "AND t.isTransfer = 0 AND t.id NOT IN (SELECT txnId FROM loan_entries WHERE txnId IS NOT NULL) " +
             "ORDER BY t.occurredAt DESC"
     )
     fun observeCategoryDebits(from: Long, to: Long, categoryId: Long?): Flow<List<TxnWithSender>>
@@ -208,7 +212,7 @@ interface TxnDao {
     @Query(
         "SELECT t.*, r.sender AS sender, r.body AS body FROM transactions t " +
             "LEFT JOIN raw_messages r ON r.id = t.rawId " +
-            "WHERE t.direction = 'DEBIT' AND t.categoryId IS NULL " +
+            "WHERE t.direction = 'DEBIT' AND t.categoryId IS NULL AND t.isTransfer = 0 " +
             "AND t.id NOT IN (SELECT txnId FROM loan_entries WHERE txnId IS NOT NULL) " +
             "ORDER BY t.occurredAt DESC"
     )
@@ -225,6 +229,23 @@ interface TxnDao {
             "GROUP BY categoryId ORDER BY COUNT(*) DESC LIMIT 1"
     )
     suspend fun likelyCategory(merchant: String?, remark: String?): Long?
+
+    /** Money moved into the user's own wallets in [from, to), which spending leaves out. */
+    @Query(
+        "SELECT COALESCE(SUM(amountMinor), 0) FROM transactions " +
+            "WHERE direction = 'DEBIT' AND occurredAt >= :from AND occurredAt < :to AND isTransfer = 1"
+    )
+    fun observeTransfersBetween(from: Long, to: Long): Flow<Long>
+
+    /** Every parsed debit with its message text, for re-deciding transfers. */
+    @Query(
+        "SELECT t.*, r.sender AS sender, r.body AS body FROM transactions t " +
+            "JOIN raw_messages r ON r.id = t.rawId WHERE t.direction = 'DEBIT'"
+    )
+    suspend fun parsedDebits(): List<TxnWithSender>
+
+    @Query("UPDATE transactions SET isTransfer = :transfer WHERE id IN (:ids)")
+    suspend fun setTransfer(ids: List<String>, transfer: Boolean)
 
     /** Debits in [from, to) marked as a loan, which the spending totals leave out. */
     @Query(

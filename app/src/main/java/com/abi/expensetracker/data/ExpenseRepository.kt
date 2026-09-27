@@ -149,6 +149,40 @@ class ExpenseRepository(
         db.bankDao().insert(Bank(name = name.trim(), icon = icon?.takeIf { it.isNotBlank() }))
     }
 
+    /** Every wallet ID the user set on any account; see [TransferDetector]. */
+    private suspend fun ownWalletIds(): List<String> =
+        db.bankDao().all().flatMap { TransferDetector.parseIds(it.walletIds) }
+
+    /**
+     * Saves [text] as [bank]'s own wallet IDs and re-decides every parsed debit, so the
+     * change reaches history at once rather than at the next reparse. Returns how many
+     * debits are transfers now.
+     */
+    suspend fun setWalletIds(bank: Bank, text: String): Int = withContext(Dispatchers.IO) {
+        val ids = TransferDetector.parseIds(text)
+        db.bankDao().update(bank.copy(walletIds = ids.joinToString(", ").ifBlank { null }))
+        refreshTransfers()
+    }
+
+    private suspend fun refreshTransfers(): Int = DbWrites.lock.withLock {
+        db.withTransaction {
+            val ids = ownWalletIds()
+            val (transfers, others) = db.txnDao().parsedDebits()
+                .partition { TransferDetector.isTransfer(it.txn, it.body, ids) }
+            transfers.map { it.txn.id }.chunked(500).forEach { db.txnDao().setTransfer(it, true) }
+            others.map { it.txn.id }.chunked(500).forEach { db.txnDao().setTransfer(it, false) }
+            transfers.size
+        }
+    }
+
+    /** IDs printed next to [bank]'s name in stored messages, most frequent first. */
+    suspend fun suggestWalletIds(bank: Bank): List<Pair<String, Int>> = withContext(Dispatchers.IO) {
+        TransferDetector.suggestIds(bank.name, db.rawMessageDao().bodiesMentioning(bank.name))
+    }
+
+    fun observeTransfersBetween(range: DateRange): Flow<Long> =
+        db.txnDao().observeTransfersBetween(range.startMillis, range.endMillis)
+
     suspend fun setBankIcon(bank: Bank, icon: String?) = withContext(Dispatchers.IO) {
         db.bankDao().update(bank.copy(icon = icon?.takeIf { it.isNotBlank() }))
     }
@@ -706,7 +740,10 @@ class ExpenseRepository(
             if (txn != null) byTxn[txn.id] = message
             txn
         }
-        val categorized = categorizer().apply(parsed)
+        val ids = ownWalletIds()
+        val categorized = categorizer().apply(parsed).map { txn ->
+            txn.copy(isTransfer = TransferDetector.isTransfer(txn, byTxn[txn.id]?.body, ids))
+        }
         return insertParsed(categorized.map { it to byTxn.getValue(it.id).sender }) to byTxn
     }
 
@@ -791,6 +828,7 @@ class ExpenseRepository(
         val parser = SmsParser(db.ruleDao().enabled())
         // Read once rather than per page: the category list does not change mid-reparse.
         val categorizing = categorizer()
+        val ownWallets = ownWalletIds()
         // Only the derived rows. Manual entries have no message to rebuild them from.
         db.txnDao().deleteParsed()
         db.txnCopyDao().deleteOrphans()
@@ -802,10 +840,12 @@ class ExpenseRepository(
             val page = db.rawMessageDao().page(pageSize, offset)
             if (page.isEmpty()) break
             val parsed = page.mapNotNull { message ->
-                (parser.parse(message) as? ParseOutcome.Parsed)?.txn?.let { it to message.sender }
+                (parser.parse(message) as? ParseOutcome.Parsed)?.txn?.let { it to message }
             }
-            val categorized = categorizing.apply(parsed.map { it.first })
-            parsedCount += insertParsed(categorized.zip(parsed) { txn, (_, sender) -> txn to sender }).size
+            val categorized = categorizing.apply(parsed.map { it.first }).zip(parsed) { txn, (_, message) ->
+                txn.copy(isTransfer = TransferDetector.isTransfer(txn, message.body, ownWallets))
+            }
+            parsedCount += insertParsed(categorized.zip(parsed) { txn, (_, message) -> txn to message.sender }).size
             offset += page.size
         }
         return parsedCount

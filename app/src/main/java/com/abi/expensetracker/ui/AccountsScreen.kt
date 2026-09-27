@@ -1,5 +1,16 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.produceState
+import com.abi.expensetracker.data.TransferDetector
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.abi.expensetracker.ui.components.SyncSmsControl
@@ -79,6 +90,7 @@ fun AccountsScreen(
     var newBankIcon by remember { mutableStateOf<String?>(null) }
     /** The saved bank whose icon is being picked, or null when that picker is closed. */
     var iconPickerFor by remember { mutableStateOf<Bank?>(null) }
+    var walletIdsFor by remember { mutableStateOf<Bank?>(null) }
     /** Whether the picker for a notification app is open. */
     var addingReadApp by remember { mutableStateOf(false) }
     val readApps by vm.readApps.collectAsStateWithLifecycle()
@@ -87,6 +99,7 @@ fun AccountsScreen(
     val notificationApps by vm.notificationApps.collectAsStateWithLifecycle()
     val syncing by vm.syncing.collectAsStateWithLifecycle()
     val syncStatus by vm.syncStatus.collectAsStateWithLifecycle()
+    val walletStatus by vm.walletStatus.collectAsStateWithLifecycle()
     /** The same picker for the bank still being typed into the form above. */
     var pickingNewBankIcon by remember { mutableStateOf(false) }
     var addingBank by remember { mutableStateOf(false) }
@@ -144,6 +157,16 @@ fun AccountsScreen(
                 }
             }
 
+            walletStatus?.let { message ->
+                item {
+                    Text(
+                        message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             // One card, one row per account: with the app chips gone each account is just
             // an icon and a name, and a card apiece was mostly padding.
             if (banks.isNotEmpty()) item {
@@ -152,6 +175,7 @@ fun AccountsScreen(
                         BankRow(
                             bank = bank,
                             onPickIcon = { iconPickerFor = bank },
+                            onWalletIds = { walletIdsFor = bank },
                             onDelete = { vm.deleteBank(bank.id) }
                         )
                         if (index < banks.lastIndex) {
@@ -330,6 +354,82 @@ fun AccountsScreen(
             onPick = { vm.setBankIcon(bank, it); iconPickerFor = null }
         )
     }
+
+    walletIdsFor?.let { bank ->
+        val suggestions by produceState(emptyList<Pair<String, Int>>(), bank.id) {
+            value = vm.suggestWalletIds(bank)
+        }
+        WalletIdsDialog(
+            bank = bank,
+            suggestions = suggestions,
+            onDismiss = { walletIdsFor = null },
+            onSave = { vm.setWalletIds(bank, it); walletIdsFor = null }
+        )
+    }
+}
+
+/**
+ * The user's own IDs on a wallet, so a bank debit that loads one counts as moving money
+ * rather than spending it. Suggests the IDs the bank printed next to this wallet's name,
+ * most frequent first: the user's own number is nearly always the top one.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WalletIdsDialog(
+    bank: Bank,
+    suggestions: List<Pair<String, Int>>,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var text by rememberSaveable(bank.id) { mutableStateOf(bank.walletIds.orEmpty()) }
+    val entered = TransferDetector.parseIds(text)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        title = { Text("${bank.name} wallet IDs") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Your own ID on this wallet, usually your phone number. Money a bank sends " +
+                        "to it is a transfer to yourself and stops counting as spending. " +
+                        "Loads to anyone else's ID stay spending.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    label = { Text("IDs, comma separated") },
+                    placeholder = { Text("98XXXXXXXX") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                val offered = suggestions.filter { it.first !in entered }.take(4)
+                if (offered.isNotEmpty()) {
+                    Text(
+                        "Seen in your bank messages",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        offered.forEach { (id, count) ->
+                            SuggestionChip(
+                                onClick = { text = (entered + id).joinToString(", ") },
+                                label = { Text("$id · ${count}×") }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSave(text) }, shape = PillShape) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 /**
@@ -506,6 +606,7 @@ private fun AppIconPicker(selected: String?, onPick: (String?) -> Unit) {
 private fun BankRow(
     bank: Bank,
     onPickIcon: () -> Unit,
+    onWalletIds: () -> Unit,
     onDelete: () -> Unit
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -515,11 +616,16 @@ private fun BankRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         IconButtonSwatch(icon = bank.icon, fallback = bank.name, onClick = onPickIcon)
-        Text(
-            bank.name,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.weight(1f)
-        )
+        Column(Modifier.weight(1f)) {
+            Text(bank.name, style = MaterialTheme.typography.titleSmall)
+            bank.walletIds?.let {
+                Text(
+                    "Your wallet: $it",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         // Behind a menu: set once, and a red Delete on every row was the loudest thing on
         // the screen for the action taken least.
         Box {
@@ -530,6 +636,10 @@ private fun BankRow(
                 DropdownMenuItem(
                     text = { Text("Change icon") },
                     onClick = { menuOpen = false; onPickIcon() }
+                )
+                DropdownMenuItem(
+                    text = { Text("Wallet IDs") },
+                    onClick = { menuOpen = false; onWalletIds() }
                 )
                 DropdownMenuItem(
                     text = { Text("Delete account", color = AppTheme.finance.debit) },
