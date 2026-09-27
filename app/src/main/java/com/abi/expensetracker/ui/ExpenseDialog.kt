@@ -1,5 +1,9 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.ui.BiasAlignment
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.isImeVisible
 import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.Box
@@ -45,7 +49,7 @@ import java.time.ZoneId
  * ledger screen that opens it.
  */
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun ExpenseDialog(
     nepaliDates: Boolean,
@@ -84,10 +88,12 @@ internal fun ExpenseDialog(
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
 
-    // Pinned near the top instead of centred: a centred dialog rode up with the keyboard
-    // and bounced as the category suggestions came and went, and left the suggestions no
-    // room above the keyboard. This window does not resize for the keyboard, so the form
-    // stays exactly where it is.
+    // Centred while the keyboard is down; slid to the top while it is up, so a field's
+    // suggestions have room between it and the keyboard. The window does not resize for
+    // the keyboard, so nothing else moves: the suggestions are a popup, not part of the
+    // form, and the form does not jump as they come and go.
+    val keyboardUp = WindowInsets.isImeVisible
+    val verticalBias by animateFloatAsState(if (keyboardUp) -1f else 0f, label = "form position")
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
@@ -98,7 +104,7 @@ internal fun ExpenseDialog(
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            contentAlignment = Alignment.TopCenter
+            contentAlignment = BiasAlignment(horizontalBias = 0f, verticalBias = verticalBias)
         ) {
             Surface(
                 shape = MaterialTheme.shapes.extraLarge,
