@@ -20,7 +20,9 @@ convention listed here, update the matching line in the same change.
   runs the keystore-signed release, so a debug build cannot install over it (no
   instrumented tests on that phone).
 - `./gradlew assembleRelease` — R8-minified release (≈2 MB), much smoother than debug;
-  install with `adb install -r app/build/outputs/apk/release/app-release.apk`. Signed from
+  install with `adb install -r --user 0 app/build/outputs/apk/release/app-release.apk`
+  (`--user 0` always: without it the phone's Samsung Dual Messenger profile, user 95, gets
+  a second copy). Signed from
   a gitignored `keystore.properties`; without it the release build fails unless
   `-PallowDebugSigning` is passed. `profileinstaller` applies library baseline
   profiles. Judge performance on release builds only.
