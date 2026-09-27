@@ -94,6 +94,10 @@ convention listed here, update the matching line in the same change.
   category/bank/rule ids by name (rules by patterns), keeps local sender links and loan
   links, and skips messages already booked. Safety copy before REPLACE goes to
   `filesDir/pre-import/` (newest 3).
+- `backup/AutoBackup.kt` — weekly WorkManager job (battery-not-low) that exports into the
+  document tree picked in Settings → Backup (`SettingsStore.autoBackupFolder`, persisted
+  URI grant), names files `expenses-auto-<date>.json`, keeps the newest 4, records last
+  success/error. The only scheduled background work in the app.
 - `di/ServiceLocator.kt` — `repository(context)`, `backupManager(context)`.
 - `ui/Navigation.kt` — `Destination` enum = bottom bar tabs (HOME/Ledger, TRENDS, LOANS,
   SETTINGS); tabs are `HorizontalPager` pages. Icons everywhere are the mockups'
@@ -110,7 +114,9 @@ convention listed here, update the matching line in the same change.
   have no icons; `Category.icon` column is unused; no direction badge, the signed amount
   says it), status tag only for Loan/Split/Share/Review, loan rows untitled by the user are
   named "Lent to X" etc., tap = edit, long-press = multi-select
-  (selection top bar with Delete + confirm), period chips (incl. `THIS_MONTH` = calendar
+  (selection top bar with Delete + confirm), search (top-bar icon; `observeSearch` over
+  all time: merchant/remark/message/category text, or exact amount when the query is a
+  number; chips and hero hidden while searching), period chips (incl. `THIS_MONTH` = calendar
   month on the user's calendar, matching Trends), hero card,
   `ExpenseDialog` (in `ui/ExpenseDialog.kt` with `TxnLinkControls`/`SourceMessage`; shared add/edit dialog: amount, remark, direction, "Paid from" account
   dropdown for manual rows (row subtitle "Sanima · Added by you"), category dropdown with
@@ -130,6 +136,10 @@ convention listed here, update the matching line in the same change.
   (default Today, `PeriodChips`/`DateRangeDialog` reused from HomeScreen), "Not a
   duplicate" button. Opened from a Ledger top-bar icon (badged, shown only when the period
   has duplicates), drawn in place of HomeScreen.
+- `ui/SortScreen.kt` + `SortViewModel.kt` — "Sort N uncategorised payments" (button under
+  Trends' breakdown, all-time count): one uncategorised debit at a time, category chips
+  (the one `likelyCategory` gives from same merchant/remark first), optional keyword from
+  `KeywordSuggester` added to the category via `ExpenseRepository.fileAs`, Skip.
 - `ui/TrendsScreen.kt` — tapping a category row opens the real ledger (`HomeScreen` with
   `categoryView`, a keyed `HomeViewModel` put in category mode by `showCategory(range, id)`
   → `observeCategoryDebits`, loans excluded): same rows, edit popup, select/delete; Back

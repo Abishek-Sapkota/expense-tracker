@@ -74,6 +74,11 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openCategory(slice: CategorySlice?) { _openCategory.value = slice }
 
+    /** Uncategorised spending over all time: what the sorting screen will offer. */
+    val uncategorisedCount: StateFlow<Int> = repository.observeUncategorisedDebits()
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
 
     /**
      * The month on screen, on whichever calendar the user reads.

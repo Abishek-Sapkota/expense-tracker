@@ -108,6 +108,10 @@ dependencies {
 
     implementation(libs.androidx.datastore.preferences)
 
+    // The weekly automatic backup. WorkManager rather than an alarm or a loop: the system
+    // batches it with other work, runs it after a reboot, and skips it on low battery.
+    implementation(libs.androidx.work.runtime)
+
     // Installs the ahead-of-time baseline profiles that Compose and the other AndroidX
     // libraries ship, even for a sideloaded APK, so first launch and scrolling are not
     // running interpreted code.

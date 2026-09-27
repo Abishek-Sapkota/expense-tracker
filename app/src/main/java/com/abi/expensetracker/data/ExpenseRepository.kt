@@ -92,6 +92,20 @@ class ExpenseRepository(
     fun observeReceivedBetween(range: DateRange): Flow<Long> =
         db.txnDao().observeReceivedBetween(range.startMillis, range.endMillis)
 
+    /**
+     * Transactions matching [query] anywhere in their text, or by amount when the query is
+     * a number ("450" finds रु450.00). LIKE is case-insensitive for ASCII, which covers the
+     * merchant names and remarks people search for.
+     */
+    fun observeSearch(query: String): Flow<List<TxnWithSender>> {
+        val text = query.trim()
+        val escaped = text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        val amount = Money.parseToMinor(text)
+        // A number is looked up as an amount only, not inside any text, where every
+        // balance, phone number and reference would match it.
+        return db.txnDao().observeSearch("%$escaped%", amount)
+    }
+
     fun observeBetween(range: DateRange): Flow<List<TxnWithSender>> =
         db.txnDao().observeBetweenWithSender(range.startMillis, range.endMillis)
 
@@ -607,6 +621,30 @@ class ExpenseRepository(
     }
 
     /** Sets the category by hand, which a keyword guess must never overwrite later. */
+    fun observeUncategorisedDebits(): Flow<List<TxnWithSender>> = db.txnDao().observeUncategorisedDebits()
+
+    /** A category guessed from how the user filed the same merchant or remark before. */
+    suspend fun likelyCategory(txn: Txn): Long? = withContext(Dispatchers.IO) {
+        if (txn.merchant == null && txn.remark == null) return@withContext null
+        db.txnDao().likelyCategory(txn.merchant, txn.remark)
+    }
+
+    /**
+     * Files [txn] under [categoryId] from the sorting screen, and when [keyword] is given
+     * adds it to that category so the rest file themselves. Returns how many other rows
+     * the new keyword filed.
+     */
+    suspend fun fileAs(txn: Txn, categoryId: Long, keyword: String?): Int = withContext(Dispatchers.IO) {
+        setCategory(txn, categoryId)
+        val word = keyword?.trim()?.lowercase()?.ifBlank { null } ?: return@withContext 0
+        val category = db.categoryDao().all().firstOrNull { it.id == categoryId } ?: return@withContext 0
+        if (word !in category.keywordList) {
+            val keywords = listOf(category.keywords.trim(), word).filter { it.isNotEmpty() }.joinToString(", ")
+            db.categoryDao().update(category.copy(keywords = keywords))
+        }
+        categorizeUncategorized()
+    }
+
     suspend fun setCategory(txn: Txn, categoryId: Long?) = withContext(Dispatchers.IO) {
         db.txnDao().update(
             txn.copy(categoryId = categoryId, needsReview = false, userEdited = true)

@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.abi.expensetracker.backup.ImportMode
+import com.abi.expensetracker.backup.AutoBackup
+import android.content.Intent
 import com.abi.expensetracker.data.Money
 import com.abi.expensetracker.data.SettingsStore
 import com.abi.expensetracker.data.model.Category
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /** Permissions, appearance, the spending limit, and the occasional maintenance actions. */
@@ -169,6 +172,58 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         val r = backup.exportTo(uri)
         "Exported ${r.rawMessages} messages, ${r.transactions} transactions, " +
             "${r.rules} rules, ${r.banks} banks."
+    }
+
+    /** The weekly backup: its folder (null when off), last success and last error. */
+    data class AutoBackupState(val folder: String?, val lastAt: Long?, val error: String?)
+
+    val autoBackup: StateFlow<AutoBackupState> =
+        combine(settings.autoBackupFolder, settings.lastAutoBackup) { folder, (at, error) ->
+            AutoBackupState(folder?.let(AutoBackup::folderLabel), at, error)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AutoBackupState(null, null, null))
+
+    /**
+     * Turns automatic backup on for [tree], or moves it there. The grant is made
+     * persistent, or it would lapse at the next reboot and every weekly run would fail.
+     */
+    fun chooseBackupFolder(tree: Uri) = launchTask("Backing up") {
+        val app = getApplication<Application>()
+        app.contentResolver.takePersistableUriPermission(
+            tree, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        )
+        settings.autoBackupFolder.first()?.let { old ->
+            if (old != tree.toString()) releaseFolder(Uri.parse(old))
+        }
+        settings.setAutoBackupFolder(tree.toString())
+        AutoBackup.schedule(app)
+        // One now, so the user sees it work instead of waiting a week to find out.
+        AutoBackup.runNow(app).fold(
+            onSuccess = { "Backed up as $it. Next one in a week." },
+            onFailure = { "Folder saved, but the backup failed: ${it.message}" }
+        )
+    }
+
+    fun backupNow() = launchTask("Backing up") {
+        AutoBackup.runNow(getApplication()).fold(
+            onSuccess = { "Backed up as $it." },
+            onFailure = { "Backup failed: ${it.message}" }
+        )
+    }
+
+    fun turnOffAutoBackup() = launchTask("Turning off") {
+        val app = getApplication<Application>()
+        AutoBackup.cancel(app)
+        settings.autoBackupFolder.first()?.let { releaseFolder(Uri.parse(it)) }
+        settings.setAutoBackupFolder(null)
+        "Automatic backup is off. Files already written stay in the folder."
+    }
+
+    private fun releaseFolder(tree: Uri) {
+        runCatching {
+            getApplication<Application>().contentResolver.releasePersistableUriPermission(
+                tree, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        }
     }
 
     fun importBackup(uri: Uri, mode: ImportMode) = launchTask("Importing") {

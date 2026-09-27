@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -107,6 +108,11 @@ fun SettingsScreen(
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri -> uri?.let(vm::exportBackup) }
+
+    val autoBackup by vm.autoBackup.collectAsStateWithLifecycle()
+    val folderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri -> uri?.let(vm::chooseBackupFolder) }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -348,6 +354,13 @@ fun SettingsScreen(
                 )
 
                 SettingsSection.BACKUP -> {
+                    AutoBackupCard(
+                        state = autoBackup,
+                        busy = busy,
+                        onChooseFolder = { folderLauncher.launch(null) },
+                        onBackupNow = vm::backupNow,
+                        onTurnOff = vm::turnOffAutoBackup
+                    )
                     Text(
                         "Everything is written to one JSON file: messages, transactions, " +
                             "templates, banks and sender links.",
@@ -414,7 +427,7 @@ private enum class SettingsSection(val title: String, val summary: String) {
     MESSAGES("Messages & parsing", "Sync the inbox, rescan it, or rebuild transactions"),
     TEMPLATES("Parser templates", "Teach the app how your bank words its messages"),
     APPEARANCE("Appearance", "Theme and accent colour"),
-    BACKUP("Backup", "Export or import everything as one file")
+    BACKUP("Backup", "Weekly automatic backup, export or import")
 }
 
 /**
@@ -1045,3 +1058,60 @@ private fun basisWords(basis: LimitBasis): String = when (basis) {
 
 /** Today on the Bikram Sambat calendar, or null when the table does not reach it. */
 private fun nepaliToday(): NepaliDate? = NepaliCalendar.fromGregorian(LocalDate.now())
+
+/**
+ * Automatic backup, first in the Backup section because it is the part that protects the
+ * data without the user having to remember anything.
+ */
+@Composable
+private fun AutoBackupCard(
+    state: SettingsViewModel.AutoBackupState,
+    busy: Boolean,
+    onChooseFolder: () -> Unit,
+    onBackupNow: () -> Unit,
+    onTurnOff: () -> Unit
+) {
+    LedgerCard {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Automatic backup", style = MaterialTheme.typography.titleMedium)
+            val folder = state.folder
+            if (folder == null) {
+                Text(
+                    "Off. The app never goes online, so a backup in a folder you choose is " +
+                        "the only copy that survives a lost or reset phone. Pick a folder a " +
+                        "sync app or your computer can reach.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Button(onClick = onChooseFolder, enabled = !busy, shape = PillShape) {
+                    Text("Choose folder")
+                }
+            } else {
+                val last = state.lastAt?.let {
+                    SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault()).format(Date(it))
+                }
+                Text(
+                    "Weekly to $folder, keeping the newest 4." +
+                        (last?.let { " Last backup $it." } ?: " No backup yet."),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                state.error?.let {
+                    Text(
+                        "Last attempt failed: $it",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                ) {
+                    Button(onClick = onBackupNow, enabled = !busy, shape = PillShape) { Text("Back up now") }
+                    OutlinedButton(onClick = onChooseFolder, enabled = !busy, shape = PillShape) { Text("Change folder") }
+                    TextButton(onClick = onTurnOff, enabled = !busy) { Text("Turn off") }
+                }
+            }
+        }
+    }
+}

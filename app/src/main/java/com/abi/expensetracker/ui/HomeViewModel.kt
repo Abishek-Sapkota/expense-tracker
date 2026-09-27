@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -115,6 +116,18 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     fun showCategory(range: DateRange, categoryId: Long?) { _category.value = range to categoryId }
 
+    /** What the search box holds; null while the ledger is not searching. */
+    private val _query = MutableStateFlow<String?>(null)
+    val query: StateFlow<String?> = _query.asStateFlow()
+
+    // Typing "daraz" should not run five queries on the way there.
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    private val searchTerm = _query.debounce { if (it.isNullOrBlank()) 0L else 250L }
+
+    fun openSearch() { if (_query.value == null) _query.value = "" }
+    fun setQuery(text: String) { _query.value = text }
+    fun closeSearch() { _query.value = null }
+
     val loans: StateFlow<List<LoanEntry>> = repository.observeLoans()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -125,10 +138,16 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val rows: StateFlow<List<TxnRow>> = combine(
-        combine(selection, _category) { sel, cat -> sel to cat }.flatMapLatest { (sel, cat) ->
-            if (cat != null) repository.observeCategoryDebits(cat.first, cat.second)
-            else repository.observeBetween(sel.range)
-        },
+        combine(selection, _category, searchTerm) { sel, cat, q -> Triple(sel, cat, q) }
+            .flatMapLatest { (sel, cat, q) ->
+                when {
+                    cat != null -> repository.observeCategoryDebits(cat.first, cat.second)
+                    // A search spans all time: the payment being looked for is rarely
+                    // in the period the chips happen to show.
+                    !q.isNullOrBlank() -> repository.observeSearch(q)
+                    else -> repository.observeBetween(sel.range)
+                }
+            },
         resolver,
         repository.observeCategories(),
         repository.observeLoans(),

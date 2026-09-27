@@ -33,8 +33,34 @@ class SettingsStore(private val context: Context) {
     private val nepaliCalendarKey = booleanPreferencesKey("useNepaliCalendar")
     private val parserVersionKey = intPreferencesKey("parserVersion")
     private val maintenanceStampKey = longPreferencesKey("maintenanceStamp")
+    private val autoBackupFolderKey = stringPreferencesKey("autoBackupFolder")
+    private val lastAutoBackupAtKey = longPreferencesKey("lastAutoBackupAt")
+    private val lastAutoBackupErrorKey = stringPreferencesKey("lastAutoBackupError")
 
     /** Watermark so repeat backfills read only what arrived since the last one. */
+    /**
+     * The folder the weekly backup writes to, as a persisted document-tree URI; null when
+     * automatic backup is off. The app has no network permission, so a folder the user
+     * picks (Downloads, or one a Drive or Syncthing client watches) is the only way a copy
+     * can outlive the phone.
+     */
+    val autoBackupFolder: Flow<String?> = context.dataStore.data.map { it[autoBackupFolderKey] }
+
+    suspend fun setAutoBackupFolder(uri: String?) {
+        context.dataStore.edit { if (uri == null) it.remove(autoBackupFolderKey) else it[autoBackupFolderKey] = uri }
+    }
+
+    /** When the last automatic backup finished, and why the last attempt failed if it did. */
+    val lastAutoBackup: Flow<Pair<Long?, String?>> =
+        context.dataStore.data.map { it[lastAutoBackupAtKey] to it[lastAutoBackupErrorKey] }
+
+    suspend fun recordAutoBackup(at: Long?, error: String?) {
+        context.dataStore.edit {
+            if (at != null) it[lastAutoBackupAtKey] = at
+            if (error == null) it.remove(lastAutoBackupErrorKey) else it[lastAutoBackupErrorKey] = error
+        }
+    }
+
     val lastSyncedSmsDate: Flow<Long> =
         context.dataStore.data.map { it[lastSyncedKey] ?: 0L }
 

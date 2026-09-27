@@ -1,5 +1,10 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.ui.theme.PillShape
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
@@ -86,13 +91,21 @@ fun TrendsScreen(vm: TrendsViewModel = viewModel(), resetSignal: Int = 0) {
     val window by vm.window.collectAsStateWithLifecycle()
     val canGoForward by vm.canGoForward.collectAsStateWithLifecycle()
     val openCategory by vm.openCategory.collectAsStateWithLifecycle()
+    val uncategorised by vm.uncategorisedCount.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    var sorting by rememberSaveable { mutableStateOf(false) }
 
     // Tapping Trends while on it: current month, breakdown closed, top of the page.
     OnTabReselect(resetSignal) {
+        sorting = false
         vm.openCategory(null)
         vm.resetMonth()
         listState.scrollToItem(0)
+    }
+
+    if (sorting) {
+        SortScreen(onBack = { sorting = false }, nepaliDates = window.nepali)
+        return
     }
 
     // A tapped category takes over the tab with the ledger itself, filtered to that
@@ -173,6 +186,15 @@ fun TrendsScreen(vm: TrendsViewModel = viewModel(), resetSignal: Int = 0) {
             // The chevrons already say the rows open; the loans/splits note lives once, in
             // the total card, and only when it changed the number.
             item { SectionHeader(title = "By category") }
+            // Under the breakdown, where the uncategorised share shows. Counted over all
+            // time, like the queue it opens: a filed month hides an unfiled one otherwise.
+            if (uncategorised > 0) item {
+                OutlinedButton(
+                    onClick = { sorting = true },
+                    shape = PillShape,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) { Text("Sort $uncategorised uncategorised payment${if (uncategorised == 1) "" else "s"}") }
+            }
             item { CategoryCard(state.categories, onOpen = vm::openCategory) }
             item { Spacer(Modifier.height(24.dp)) }
         }

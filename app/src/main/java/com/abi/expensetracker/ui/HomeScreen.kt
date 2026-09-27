@@ -1,5 +1,13 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TextField
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -116,7 +124,12 @@ fun HomeScreen(
     BackHandler(enabled = categoryView != null && !selecting, onBack = onBack)
 
     // Tapping Ledger while on it returns it to how it opens: Today, top of the list.
+    val query by vm.query.collectAsStateWithLifecycle()
+    val searching = query != null && categoryView == null
+    BackHandler(enabled = searching && !selecting) { vm.closeSearch() }
+
     OnTabReselect(resetSignal) {
+        vm.closeSearch()
         showDuplicates = false
         selectedIds = emptySet()
         vm.selectPeriod(Period.TODAY)
@@ -166,6 +179,46 @@ fun HomeScreen(
                         actionIconContentColor = Color.White
                     )
                 )
+            } else if (searching) {
+                val focus = remember { FocusRequester() }
+                LaunchedEffect(Unit) { focus.requestFocus() }
+                TopAppBar(
+                    expandedHeight = 52.dp,
+                    navigationIcon = {
+                        IconButton(onClick = vm::closeSearch) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close search")
+                        }
+                    },
+                    title = {
+                        TextField(
+                            value = query.orEmpty(),
+                            onValueChange = vm::setQuery,
+                            placeholder = { Text("Search merchant, remark or amount") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Sentences,
+                                imeAction = ImeAction.Search
+                            ),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            modifier = Modifier.fillMaxWidth().focusRequester(focus)
+                        )
+                    },
+                    actions = {
+                        if (!query.isNullOrEmpty()) {
+                            IconButton(onClick = { vm.setQuery("") }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear search")
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    )
+                )
             } else {
                 TopAppBar(
                     expandedHeight = 52.dp,
@@ -180,6 +233,11 @@ fun HomeScreen(
                     // Only when this period folded something: a permanent "Duplicates (0)"
                     // took a whole row above the chips to say there was nothing to review.
                     actions = {
+                        if (categoryView == null) {
+                            IconButton(onClick = vm::openSearch) {
+                                Icon(Icons.Default.Search, contentDescription = "Search")
+                            }
+                        }
                         if (categoryView == null && duplicateCount > 0) {
                             IconButton(onClick = { showDuplicates = true }) {
                                 BadgedBox(badge = { Badge { Text("$duplicateCount") } }) {
@@ -210,7 +268,15 @@ fun HomeScreen(
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
             }
-            if (categoryView == null) item {
+            // Searching spans all time, so the period chips and its totals step aside.
+            if (searching) item {
+                SectionHeader(
+                    title = if (query.isNullOrBlank()) "Type to search every transaction"
+                    else "${rows.size}${if (rows.size >= 300) "+" else ""} found",
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+            if (categoryView == null && !searching) item {
                 Box(Modifier.padding(bottom = 12.dp)) { PeriodChips(
                     selected = selection.period,
                     onSelect = { period ->
@@ -219,7 +285,7 @@ fun HomeScreen(
                 ) }
             }
 
-            if (categoryView == null) item {
+            if (categoryView == null && !searching) item {
                 PeriodHeroCard(
                     // A single day also names its date, on the calendar the user reads.
                     periodLabel = when (selection.period) {
@@ -273,7 +339,16 @@ fun HomeScreen(
             }
 
 
-            if (rows.isEmpty()) {
+            if (rows.isEmpty() && searching) {
+                if (!query.isNullOrBlank()) item {
+                    Text(
+                        "No transaction matches \"${query.orEmpty().trim()}\".",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    )
+                }
+            } else if (rows.isEmpty()) {
                 item {
                     LedgerCard(Modifier.padding(bottom = 12.dp)) {
                         Column(

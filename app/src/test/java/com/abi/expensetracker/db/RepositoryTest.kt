@@ -14,6 +14,7 @@ import com.abi.expensetracker.data.model.Source
 import com.abi.expensetracker.data.model.Split
 import com.abi.expensetracker.parser.DefaultRules
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -120,5 +121,38 @@ class RepositoryTest {
         repo.ingest(listOf(sms("Your transaction of Rs. 500.00 to ABC Store was unsuccessful.", 1_000 * hour, "eSewa")), prompt = false)
         assertEquals(0, db.txnDao().all().size)
         assertNotNull(db.rawMessageDao().byId(RawMessage.idFor("eSewa", "Your transaction of Rs. 500.00 to ABC Store was unsuccessful.", 1_000 * hour)))
+    }
+
+    @Test
+    fun `search finds by text and by exact amount across all time`() = runBlocking {
+        repo.ingest(
+            listOf(
+                sms("Rs.450.00 debited from a/c XX1234 to DARAZ.", 10 * hour),
+                sms("Rs.1,200.00 debited from a/c XX1234 to SWIGGY.", 5_000 * hour)
+            ),
+            prompt = false
+        )
+        assertEquals(listOf("DARAZ"), repo.observeSearch("daraz").first().map { it.txn.merchant })
+        assertEquals(listOf("SWIGGY"), repo.observeSearch("1200").first().map { it.txn.merchant })
+        assertEquals(0, repo.observeSearch("100%").first().size)
+    }
+
+    @Test
+    fun `filing with a keyword files the others like it`() = runBlocking {
+        val dining = db.categoryDao().insert(
+            com.abi.expensetracker.data.model.Category(name = "Dining", icon = "", keywords = "")
+        )
+        repo.ingest(
+            listOf(
+                sms("Rs.300.00 debited from a/c XX1234 to FOODMANDU.", 10 * hour),
+                sms("Rs.500.00 debited from a/c XX1234 to FOODMANDU.", 20 * hour)
+            ),
+            prompt = false
+        )
+        val first = db.txnDao().all().first()
+        val more = repo.fileAs(first, dining, "foodmandu")
+        assertEquals(1, more)
+        assertEquals(listOf(dining, dining), db.txnDao().all().map { it.categoryId })
+        assertEquals(dining, repo.likelyCategory(db.txnDao().all().last()))
     }
 }

@@ -187,6 +187,45 @@ interface TxnDao {
     )
     fun observeCategoryDebits(from: Long, to: Long, categoryId: Long?): Flow<List<TxnWithSender>>
 
+    /**
+     * Rows whose merchant, remark, message text or category name contains [like] (already
+     * wrapped in % and escaped), or whose amount is exactly [amount]; across all time,
+     * newest first. Capped: a one-letter query should not build a list of every row.
+     */
+    @Query(
+        "SELECT t.*, r.sender AS sender, r.body AS body FROM transactions t " +
+            "LEFT JOIN raw_messages r ON r.id = t.rawId " +
+            "LEFT JOIN categories c ON c.id = t.categoryId " +
+            "WHERE (:amount IS NULL AND (t.merchant LIKE :like ESCAPE '\\' " +
+            "OR t.remark LIKE :like ESCAPE '\\' OR r.body LIKE :like ESCAPE '\\' " +
+            "OR c.name LIKE :like ESCAPE '\\')) " +
+            "OR (:amount IS NOT NULL AND t.amountMinor = :amount) " +
+            "ORDER BY t.occurredAt DESC LIMIT 300"
+    )
+    fun observeSearch(like: String, amount: Long?): Flow<List<TxnWithSender>>
+
+    /** Spending with no category, newest first, for the sorting screen. Loans are not spending. */
+    @Query(
+        "SELECT t.*, r.sender AS sender, r.body AS body FROM transactions t " +
+            "LEFT JOIN raw_messages r ON r.id = t.rawId " +
+            "WHERE t.direction = 'DEBIT' AND t.categoryId IS NULL " +
+            "AND t.id NOT IN (SELECT txnId FROM loan_entries WHERE txnId IS NOT NULL) " +
+            "ORDER BY t.occurredAt DESC"
+    )
+    fun observeUncategorisedDebits(): Flow<List<TxnWithSender>>
+
+    /**
+     * The category most often given to rows with this merchant or this exact remark, or
+     * null. What the user filed "SWIGGY" under before is the best guess for the next one.
+     */
+    @Query(
+        "SELECT categoryId FROM transactions WHERE categoryId IS NOT NULL AND (" +
+            "(:merchant IS NOT NULL AND merchant = :merchant COLLATE NOCASE) OR " +
+            "(:remark IS NOT NULL AND remark = :remark COLLATE NOCASE)) " +
+            "GROUP BY categoryId ORDER BY COUNT(*) DESC LIMIT 1"
+    )
+    suspend fun likelyCategory(merchant: String?, remark: String?): Long?
+
     /** Debits in [from, to) marked as a loan, which the spending totals leave out. */
     @Query(
         "SELECT COALESCE(SUM(amountMinor), 0) FROM transactions " +
