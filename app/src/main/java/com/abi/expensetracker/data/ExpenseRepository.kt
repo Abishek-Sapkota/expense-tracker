@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.withLock
@@ -362,6 +363,8 @@ class ExpenseRepository(
             m to resolver.bankFor(m.sender, m.body)?.name
         }
     }
+        // Regexes over up to 5,000 messages on every write: never on the main thread.
+        .flowOn(Dispatchers.Default)
 
     fun observeLoans(): Flow<List<LoanEntry>> = db.loanDao().observeAll()
 

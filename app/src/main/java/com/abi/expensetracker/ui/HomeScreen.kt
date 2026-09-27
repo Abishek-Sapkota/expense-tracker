@@ -97,8 +97,10 @@ fun HomeScreen(
         ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) ==
             PackageManager.PERMISSION_GRANTED
     }
-    var editing by remember { mutableStateOf<com.abi.expensetracker.data.model.Txn?>(null) }
-    var showRangePicker by remember { mutableStateOf(false) }
+    // The id, saveable, so the editor survives a rotation; the row is looked up afresh.
+    var editingId by rememberSaveable { mutableStateOf<String?>(null) }
+    val editing = remember(rows, editingId) { rows.firstOrNull { it.txn.id == editingId }?.txn }
+    var showRangePicker by rememberSaveable { mutableStateOf(false) }
     // Saveable, so leaving the tab and coming back finds Duplicates still open.
     var showDuplicates by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -106,14 +108,20 @@ fun HomeScreen(
     val duplicateCount by vm.duplicateCount.collectAsStateWithLifecycle()
     var loanDraft by remember { mutableStateOf<LoanEntry?>(null) }
     val splits by vm.splits.collectAsStateWithLifecycle()
-    var splitOpen by remember { mutableStateOf(false) }
-    var sharePaymentOpen by remember { mutableStateOf(false) }
+    var splitOpen by rememberSaveable { mutableStateOf(false) }
+    var sharePaymentOpen by rememberSaveable { mutableStateOf(false) }
     // Ids, not rows, so a row that refreshes underneath stays selected. Only the ids still
     // on screen count, so switching period cannot delete rows the user can no longer see.
-    var selectedIds by remember { mutableStateOf(emptySet<String>()) }
+    var selectedIds by rememberSaveable { mutableStateOf(emptySet<String>()) }
+    // Grouped once per new list, not on every recomposition of the list builder.
+    val days = remember(rows) {
+        rows.groupBy {
+            Instant.ofEpochMilli(it.txn.occurredAt).atZone(ZoneId.systemDefault()).toLocalDate()
+        }
+    }
     val selectedTxns = remember(rows, selectedIds) { rows.map { it.txn }.filter { it.id in selectedIds } }
     val selecting = selectedTxns.isNotEmpty()
-    var confirmDelete by remember { mutableStateOf(false) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
     fun toggle(id: String) {
         selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
     }
@@ -302,9 +310,6 @@ fun HomeScreen(
                 // One grouped card per day under a date header, days separated by a gap.
                 // Display only: the data stays one list, so totals and selection are
                 // unaffected.
-                val days = rows.groupBy {
-                    Instant.ofEpochMilli(it.txn.occurredAt).atZone(ZoneId.systemDefault()).toLocalDate()
-                }
                 days.forEach { (day, dayRows) ->
                     item(key = "day-$day") {
                         DayHeader(day, dayRows, nepaliDates)
@@ -317,7 +322,7 @@ fun HomeScreen(
                         selected = row.txn.id in selectedIds,
                         // Once anything is selected a tap extends the selection; editing
                         // waits until the selection is cleared.
-                        onClick = { if (selecting) toggle(row.txn.id) else editing = row.txn },
+                        onClick = { if (selecting) toggle(row.txn.id) else editingId = row.txn.id },
                         onLongClick = { toggle(row.txn.id) }
                     )
                     }
@@ -462,14 +467,14 @@ fun HomeScreen(
             // A parsed row's account is its sender's; only a manual one is picked here.
             accounts = if (txn.isManual) banks else null,
             initialBankId = txn.bankId,
-            onDismiss = { editing = null },
+            onDismiss = { editingId = null },
             onConfirm = { amount, date, direction, remark, bankId ->
                 // A category picked in this dialog is the user's; keywords leave it be.
                 vm.editTransaction(
                     txn, amount, date, direction, remark,
                     autoCategorize = !categoryPicked, bankId = bankId
                 )
-                editing = null
+                editingId = null
             }
         )
     }
@@ -741,12 +746,12 @@ private fun ExpenseDialog(
     initialDate: LocalDate = LocalDate.now(),
     note: String? = null
 ) {
-    var amount by remember { mutableStateOf(initialAmount) }
-    var remark by remember { mutableStateOf(initialRemark) }
-    var direction by remember { mutableStateOf(initialDirection) }
-    var date by remember { mutableStateOf(initialDate) }
-    var bankId by remember { mutableStateOf(initialBankId) }
-    var showDatePicker by remember { mutableStateOf(false) }
+    var amount by rememberSaveable { mutableStateOf(initialAmount) }
+    var remark by rememberSaveable { mutableStateOf(initialRemark) }
+    var direction by rememberSaveable { mutableStateOf(initialDirection) }
+    var date by rememberSaveable { mutableStateOf(initialDate) }
+    var bankId by rememberSaveable { mutableStateOf(initialBankId) }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
 
     AlertDialog(

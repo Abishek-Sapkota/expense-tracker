@@ -35,6 +35,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -150,7 +152,11 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 split = splitByTxn[row.txn.id]
             )
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }
+        // Resolving every row's account runs a regex and a scan per row, on each write to
+        // any of these tables; on the main thread that was jank on a month of rows.
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Reports folded as duplicates in the selected period, for the ledger's chip. */
     val duplicateCount: StateFlow<Int> = selection

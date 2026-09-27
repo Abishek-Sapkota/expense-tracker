@@ -98,14 +98,20 @@ fun TrendsScreen(vm: TrendsViewModel = viewModel(), resetSignal: Int = 0) {
     // A tapped category takes over the tab with the ledger itself, filtered to that
     // category and month: same rows, edit popup, selection and delete. Back returns.
     openCategory?.let { slice ->
-        val ledger: HomeViewModel = viewModel(key = "trends-category")
-        LaunchedEffect(slice.categoryId, window) { ledger.showCategory(window.range, slice.categoryId) }
+        // Keyed per category and month, and put in category mode before anything collects
+        // it: one shared ledger showed the previous category's rows (or today's whole
+        // ledger) for its first frames, and select-all could act on them.
+        val ledger: HomeViewModel =
+            viewModel(key = "trends-category-${slice.categoryId}-${window.range.startMillis}")
+        remember(ledger) { ledger.showCategory(window.range, slice.categoryId) }
+        // The live total, so deleting or re-filing a row in the drill-down updates it.
+        val total = state.categories.firstOrNull { it.categoryId == slice.categoryId }?.amountMinor ?: 0L
         HomeScreen(
             onOpenSettings = {},
             showAddDialog = false,
             onAddDialogClose = {},
             vm = ledger,
-            categoryView = CategoryView(slice.name, window.label, slice.amountMinor),
+            categoryView = CategoryView(slice.name, window.label, total),
             onBack = { vm.openCategory(null) }
         )
         return

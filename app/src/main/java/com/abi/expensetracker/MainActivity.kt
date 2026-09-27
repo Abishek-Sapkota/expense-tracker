@@ -1,5 +1,6 @@
 package com.abi.expensetracker
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
@@ -87,7 +88,7 @@ class MainActivity : ComponentActivity() {
                 val current = tabs[pagerState.currentPage]
                 // Owned here because the add button lives on the bar while the dialog
                 // belongs to the ledger: the bar cannot reach into HomeScreen's state.
-                var addOpen by remember { mutableStateOf(false) }
+                var addOpen by rememberSaveable { mutableStateOf(false) }
                 /** Taps on the tab already open, per tab; each screen resets when its count rises. */
                 val reselects = remember { mutableStateMapOf<Destination, Int>() }
 

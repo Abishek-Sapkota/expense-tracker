@@ -102,7 +102,7 @@ fun SettingsScreen(
     val sms = rememberSmsPermissionState()
     val notifications = rememberNotificationAccessState()
     val postNotifications = rememberPostNotificationsState()
-    var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingImportUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -121,7 +121,7 @@ fun SettingsScreen(
         openSection = null
         scroll.scrollTo(0)
     }
-    var addingCategory by remember { mutableStateOf(false) }
+    var addingCategory by rememberSaveable { mutableStateOf(false) }
     if (section != null) BackHandler { openSection = null }
 
     // Templates is a full screen with its own list and top bar, so it replaces Settings

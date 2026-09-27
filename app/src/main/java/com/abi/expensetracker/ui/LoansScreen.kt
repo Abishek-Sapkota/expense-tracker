@@ -553,16 +553,16 @@ internal fun LoanEntryDialog(
     kinds: List<LoanKind> = LoanKind.entries
 ) {
     val linked = initial.txnId != null
-    var person by remember { mutableStateOf(initial.person) }
-    var kind by remember { mutableStateOf(initial.kind) }
-    var amount by remember {
+    var person by rememberSaveable { mutableStateOf(initial.person) }
+    var kind by rememberSaveable { mutableStateOf(initial.kind) }
+    var amount by rememberSaveable {
         mutableStateOf(if (initial.amountMinor > 0) Money.toPlainAmount(initial.amountMinor) else "")
     }
-    var date by remember {
+    var date by rememberSaveable {
         mutableStateOf(Instant.ofEpochMilli(initial.occurredAt).atZone(ZoneId.systemDefault()).toLocalDate())
     }
-    var note by remember { mutableStateOf(initial.note.orEmpty()) }
-    var showDatePicker by remember { mutableStateOf(false) }
+    var note by rememberSaveable { mutableStateOf(initial.note.orEmpty()) }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
     val pickContact = rememberContactPicker { person = it }
 

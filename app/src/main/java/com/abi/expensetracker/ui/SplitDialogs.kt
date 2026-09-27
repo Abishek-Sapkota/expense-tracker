@@ -1,5 +1,6 @@
 package com.abi.expensetracker.ui
 
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -64,22 +65,22 @@ internal fun SplitBillDialog(
     onSave: (title: String, myShareMinor: Long, shares: List<Pair<String, Long>>) -> Unit,
     onDelete: (() -> Unit)?
 ) {
-    var title by remember { mutableStateOf(existing?.split?.title ?: initialTitle) }
-    var includeMe by remember { mutableStateOf(existing?.split?.myShareMinor?.let { it > 0 } ?: true) }
+    var title by rememberSaveable { mutableStateOf(existing?.split?.title ?: initialTitle) }
+    var includeMe by rememberSaveable { mutableStateOf(existing?.split?.myShareMinor?.let { it > 0 } ?: true) }
     val friends = remember { mutableStateListOf<String>().apply { existing?.shares?.forEach { add(it.person) } } }
     val custom = remember {
         mutableStateMapOf<String, String>().apply {
             existing?.shares?.forEach { put(Splits.personKey(it.person), Money.toPlainAmount(it.shareMinor)) }
         }
     }
-    var customMode by remember {
+    var customMode by rememberSaveable {
         mutableStateOf(
             existing != null && existing.shares.isNotEmpty() &&
                 Splits.equalShares(totalMinor, existing.shares.size, existing.split.myShareMinor > 0).second !=
                 existing.shares.map { it.shareMinor }
         )
     }
-    var adding by remember { mutableStateOf("") }
+    var adding by rememberSaveable { mutableStateOf("") }
     fun add(name: String) {
         val clean = name.trim()
         if (clean.isNotEmpty() && friends.none { Splits.personKey(it) == Splits.personKey(clean) }) friends += clean
@@ -240,7 +241,7 @@ internal fun SplitPaymentDialog(
         .groupBy { Splits.personKey(it.person) }
         .map { (_, list) -> list.first().person to list.sumOf { it.remainingMinor } }
         .sortedByDescending { it.second }
-    var person by remember { mutableStateOf(initialPerson ?: debtors.singleOrNull()?.first) }
+    var person by rememberSaveable { mutableStateOf(initialPerson ?: debtors.singleOrNull()?.first) }
     val theirSplits = splits.filter { s ->
         s.shares.any { Splits.personKey(it.person) == Splits.personKey(person.orEmpty()) && it.remainingMinor > 0 }
     }
