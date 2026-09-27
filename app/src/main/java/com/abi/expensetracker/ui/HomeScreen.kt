@@ -447,15 +447,23 @@ fun HomeScreen(
         )
     }
 
+    // Held here until Add: a new entry has no row yet for the pick to be saved on, which
+    // is how the edit popup saves it. Unpicked, the remark's keywords file it as before.
+    var addCategory by rememberSaveable { mutableStateOf<Long?>(null) }
     if (showAddDialog) {
         ExpenseDialog(
             nepaliDates = nepaliDates,
             title = "Add expense",
             confirmLabel = "Add",
             accounts = banks,
-            onDismiss = onAddDialogClose,
+            categories = categories,
+            initialCategoryId = null,
+            onCategoryChange = { addCategory = it },
+            onCreateCategory = { name, done -> vm.createCategory(name, done) },
+            onDismiss = { addCategory = null; onAddDialogClose() },
             onConfirm = { amount, date, direction, remark, bankId ->
-                vm.addManualExpense(amount, date, direction, remark, bankId)
+                vm.addManualExpense(amount, date, direction, remark, bankId, addCategory)
+                addCategory = null
                 onAddDialogClose()
             }
         )

@@ -282,7 +282,9 @@ class ExpenseRepository(
         occurredAt: Long,
         direction: Direction = Direction.DEBIT,
         remark: String = "",
-        bankId: Long? = null
+        bankId: Long? = null,
+        /** Picked in the add dialog; when null the remark's keywords choose. */
+        categoryId: Long? = null
     ) = withContext(Dispatchers.IO) {
         val txn = Txn(
             id = Txn.manualId(),
@@ -302,7 +304,7 @@ class ExpenseRepository(
         )
         // Through the keywords, same as a parsed row: typing "biryani" should land in
         // Dining without the user then having to say so.
-        db.txnDao().insert(txn.copy(categoryId = categorizer().categoryIdFor(txn)))
+        db.txnDao().insert(txn.copy(categoryId = categoryId ?: categorizer().categoryIdFor(txn)))
     }
 
     /**

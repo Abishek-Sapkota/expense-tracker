@@ -243,7 +243,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         date: LocalDate,
         direction: Direction,
         remark: String = "",
-        bankId: Long? = null
+        bankId: Long? = null,
+        categoryId: Long? = null
     ) {
         val amountMinor = Money.parseToMinor(amountText)
         if (amountMinor == null || amountMinor <= 0L) {
@@ -258,7 +259,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             val zone = java.time.ZoneId.systemDefault()
             val at = if (date == LocalDate.now()) System.currentTimeMillis()
             else date.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
-            repository.addManualExpense(amountMinor, at, direction, remark, bankId)
+            repository.addManualExpense(amountMinor, at, direction, remark, bankId, categoryId)
             _status.value = "Added ${Money.format(amountMinor)}."
         }
     }
