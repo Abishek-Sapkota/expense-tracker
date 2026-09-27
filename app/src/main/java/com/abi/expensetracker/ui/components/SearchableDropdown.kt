@@ -26,7 +26,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -122,16 +122,14 @@ fun <T> SearchableDropdown(
         items.none { itemLabel(it).equals(typed, ignoreCase = true) }
 
     Box(modifier) {
-        OutlinedTextField(
+        CompactTextField(
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             // Closed, it states the choice; searching, it is the search box.
             value = if (searching) query else selectedLabel,
             onValueChange = { query = it },
             enabled = enabled,
             readOnly = !searching,
-            singleLine = true,
-            shape = MaterialTheme.shapes.small,
-            placeholder = { Text(placeholder) },
+            placeholder = placeholder,
             leadingIcon = if (searching) {
                 { Icon(Icons.Default.Search, contentDescription = null) }
             } else null,
@@ -171,11 +169,13 @@ fun <T> SearchableDropdown(
                         WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
                 )
             ) {
+                // Bordered in the accent: on the dialog's own surface colour the list had
+                // no edge and read as part of the form behind it.
                 Surface(
-                    shape = MaterialTheme.shapes.extraSmall,
-                    color = MaterialTheme.colorScheme.surfaceContainer,
-                    shadowElevation = 3.dp,
-                    tonalElevation = 3.dp,
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                    shadowElevation = 6.dp,
                     modifier = Modifier.width(with(LocalDensity.current) { fieldWidth.toDp() })
                 ) {
                     Column(

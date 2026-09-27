@@ -1,5 +1,17 @@
 package com.abi.expensetracker.ui
 
+import com.abi.expensetracker.ui.components.CompactTextField
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.*
@@ -72,39 +84,53 @@ internal fun ExpenseDialog(
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
 
-    AlertDialog(
+    // Pinned near the top instead of centred: a centred dialog rode up with the keyboard
+    // and bounced as the category suggestions came and went, and left the suggestions no
+    // room above the keyboard. This window does not resize for the keyboard, so the form
+    // stays exactly where it is.
+    Dialog(
         onDismissRequest = onDismiss,
-        shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
-        text = {
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                modifier = Modifier
+                    .widthIn(max = 560.dp)
+                    .fillMaxWidth()
+                    // Taps inside the form are not taps outside it.
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+            ) {
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                    Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))
             // Scrolls because a row reported on several channels shows every message.
             Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.verticalScroll(rememberScrollState())
+                modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())
             ) {
-                OutlinedTextField(
+                CompactTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("Amount") },
+                    placeholder = "Amount",
                     // The rupee sign is a fixed adornment, not something to retype.
-                    prefix = {
-                        Text(Money.RUPEE, style = MaterialTheme.typography.titleLarge)
-                    },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.small,
-                    textStyle = MaterialTheme.typography.headlineSmall,
+                    prefix = { Text(Money.RUPEE, style = MaterialTheme.typography.titleMedium) },
+                    textStyle = MaterialTheme.typography.titleMedium,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
+                CompactTextField(
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     value = remark,
                     onValueChange = { remark = it },
-                    label = { Text("Spent on") },
-                    placeholder = { Text("e.g. Auto fare") },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.small,
+                    placeholder = "Spent on, e.g. Auto fare",
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -163,7 +189,7 @@ internal fun ExpenseDialog(
                             chosen = category?.id
                             onCategoryChange(chosen)
                         },
-                        placeholder = "Search or create a category",
+                        placeholder = "Search or create",
                         emptyText = "No category matches that",
                         // Creating from here saves a trip to Settings mid-edit; the new
                         // category is picked for this transaction as soon as it exists.
@@ -223,8 +249,11 @@ internal fun ExpenseDialog(
                     }
                 }
             }
-        },
-        confirmButton = {
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+                    ) {
+                        TextButton(onClick = onDismiss) { Text("Cancel") }
             Button(
                 onClick = { onConfirm(amount, date, direction, remark, bankId) },
                 // Only an amount that will actually save: a bad one used to close the
@@ -232,9 +261,11 @@ internal fun ExpenseDialog(
                 enabled = Money.parseToMinor(amount)?.let { it > 0 } == true,
                 shape = PillShape
             ) { Text(confirmLabel) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    )
+                    }
+                }
+            }
+        }
+    }
 
     if (showDatePicker) {
         val state = rememberDatePickerState(
