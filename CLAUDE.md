@@ -24,7 +24,8 @@ convention listed here, update the matching line in the same change.
 ## Source map (`app/src/main/java/com/abi/expensetracker/`)
 
 - `data/model/` — Room entities: `Txn` (transactions; `rawId == null` means manual,
-  `userEdited` survives reparse), `RawMessage` (verbatim SMS/notification, never deleted),
+  `userEdited` survives reparse; `bankId` = account picked for a manual entry, null = cash;
+  parsed rows resolve their account from the sender instead; backup since schema 11), `RawMessage` (verbatim SMS/notification, never deleted),
   `Rule`, `Category`, `Bank`, `SenderLink`, `SpendingLimit`, `Enums` (`Direction`, `Source`),
   `TxnCopy` (message folded into an existing txn as a cross-channel duplicate),
   `MessageFlag` (per-message user decision: `deleted`, `notDuplicate`; respected by
@@ -35,7 +36,7 @@ convention listed here, update the matching line in the same change.
   `BankApp` (legacy packageName+bankId from the old per-account app chips; no longer
   read for resolution, only to seed `SettingsStore.notificationApps` once and for old
   backups; backup since schema 10).
-- `data/db/` — `AppDatabase` (version 12, migrations 1→12 inline; schemas in
+- `data/db/` — `AppDatabase` (version 13, migrations 1→13 inline; schemas in
   `app/schemas/`), `Daos.kt` (all DAOs; spent/received/debits/category-total queries exclude
   txns linked to a loan entry), `TxnWithSender` + query result classes.
 - `data/ExpenseRepository.kt` — single data API used by ViewModels (ingest, reparse,
@@ -90,7 +91,8 @@ convention listed here, update the matching line in the same change.
   named "Lent to X" etc., tap = edit, long-press = multi-select
   (selection top bar with Delete + confirm), period chips (incl. `THIS_MONTH` = calendar
   month on the user's calendar, matching Trends), hero card,
-  `ExpenseDialog` (shared add/edit dialog: amount, remark, direction, category dropdown with
+  `ExpenseDialog` (shared add/edit dialog: amount, remark, direction, "Paid from" account
+  dropdown for manual rows (row subtitle "Sanima · Added by you"), category dropdown with
   "Create …" for a typed name (`HomeViewModel.createCategory`: name as keyword, free colour),
   every source message (primary + cross-channel copies) with channel + sender, folded
   behind "Show original message", one-line date;

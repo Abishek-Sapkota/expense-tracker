@@ -12,6 +12,7 @@ import com.abi.expensetracker.data.SplitSummary
 import com.abi.expensetracker.data.Splits
 import com.abi.expensetracker.data.Period
 import com.abi.expensetracker.data.SettingsStore
+import com.abi.expensetracker.data.model.Bank
 import com.abi.expensetracker.data.model.Category
 import com.abi.expensetracker.data.model.Direction
 import com.abi.expensetracker.data.model.LimitStatus
@@ -86,10 +87,15 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         combine(_selection, settings.useNepaliCalendar) { sel, nepali -> sel.copy(nepali = nepali) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, PeriodSelection())
 
+    /** The user's accounts, for the manual entry picker. */
+    val banks: StateFlow<List<Bank>> = repository.observeBanks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** The resolver for parsed rows, with the accounts by id for manual ones. */
     private val resolver = combine(
         repository.observeBanks(),
         repository.observeSenderLinks()
-    ) { banks, links -> repository.resolver(banks, links) }
+    ) { banks, links -> repository.resolver(banks, links) to banks.associateBy { it.id } }
 
     val categories: StateFlow<List<Category>> = repository.observeCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -120,12 +126,14 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         repository.observeCategories(),
         repository.observeLoans(),
         splits
-    ) { withSenders, bankResolver, categoryList, loanList, splitList ->
+    ) { withSenders, (bankResolver, bankById), categoryList, loanList, splitList ->
         val splitByTxn = splitList.associateBy { it.split.txnId }
         val categoryById = categoryList.associateBy { it.id }
         val loanByTxn = loanList.filter { it.txnId != null }.associateBy { it.txnId }
         withSenders.map { row ->
-            val bank = bankResolver.bankFor(row.sender, row.body)
+            // A manual row has no sender; its account is the one the user picked.
+            val bank = if (row.txn.isManual) row.txn.bankId?.let { bankById[it] }
+            else bankResolver.bankFor(row.sender, row.body)
             val category = row.txn.categoryId?.let { categoryById[it] }
             TxnRow(
                 txn = row.txn,
@@ -213,7 +221,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         amountText: String,
         date: LocalDate,
         direction: Direction,
-        remark: String = ""
+        remark: String = "",
+        bankId: Long? = null
     ) {
         val amountMinor = Money.parseToMinor(amountText)
         if (amountMinor == null || amountMinor <= 0L) {
@@ -221,11 +230,14 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         viewModelScope.launch {
-            // Midday, not midnight: a manual entry then stays inside its own day whichever
-            // way the device timezone shifts later.
-            val at = date.atTime(12, 0).atZone(java.time.ZoneId.systemDefault())
-                .toInstant().toEpochMilli()
-            repository.addManualExpense(amountMinor, at, direction, remark)
+            // Today's entry is being added as it happens, so it takes the moment it was
+            // entered and sorts among the day's other rows. A back-dated one has no known
+            // time: midday, not midnight, keeps it inside its own day whichever way the
+            // device timezone shifts later.
+            val zone = java.time.ZoneId.systemDefault()
+            val at = if (date == LocalDate.now()) System.currentTimeMillis()
+            else date.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
+            repository.addManualExpense(amountMinor, at, direction, remark, bankId)
             _status.value = "Added ${Money.format(amountMinor)}."
         }
     }
@@ -241,7 +253,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         date: LocalDate,
         direction: Direction,
         remark: String = "",
-        autoCategorize: Boolean = true
+        autoCategorize: Boolean = true,
+        bankId: Long? = null
     ) {
         val amountMinor = Money.parseToMinor(amountText)
         if (amountMinor == null || amountMinor <= 0L) {
@@ -254,7 +267,9 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             val zone = java.time.ZoneId.systemDefault()
             val time = java.time.Instant.ofEpochMilli(txn.occurredAt).atZone(zone).toLocalTime()
             val at = date.atTime(time).atZone(zone).toInstant().toEpochMilli()
-            val category = repository.editTransaction(txn, amountMinor, at, direction, remark, autoCategorize)
+            val category = repository.editTransaction(
+                txn, amountMinor, at, direction, remark, autoCategorize, bankId
+            )
             _status.value = "Updated ${Money.format(amountMinor)}." +
                 (category?.let { " Filed under $it." } ?: "")
         }

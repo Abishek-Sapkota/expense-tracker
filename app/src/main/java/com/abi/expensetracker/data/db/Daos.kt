@@ -207,6 +207,10 @@ interface TxnDao {
     @Query("UPDATE transactions SET categoryId = NULL WHERE categoryId = :categoryId")
     suspend fun clearCategory(categoryId: Long)
 
+    /** Drops a deleted account from the manual entries that named it. */
+    @Query("UPDATE transactions SET bankId = NULL WHERE bankId = :bankId")
+    suspend fun clearBank(bankId: Long)
+
     @Query("SELECT id FROM transactions WHERE userEdited = 1")
     suspend fun editedIds(): List<String>
 

@@ -6,7 +6,7 @@ object BackupSchema {
      * Without this field the first schema change would orphan every backup already
      * written — which is exactly when a backup matters most.
      */
-    const val CURRENT_VERSION = 10
+    const val CURRENT_VERSION = 11
 
     const val FIELD_SCHEMA_VERSION = "schemaVersion"
     const val FIELD_EXPORTED_AT = "exportedAt"

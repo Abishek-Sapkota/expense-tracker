@@ -133,6 +133,8 @@ class ExpenseRepository(
         // Drop the links first: leaving them would silently re-attach every mapped sender
         // to whatever bank next reuses that autoincrement id.
         db.senderLinkDao().unlinkAllFor(bankId)
+        // Same reason for manual entries that named it: they fall back to no account.
+        db.txnDao().clearBank(bankId)
         db.bankDao().delete(bankId)
     }
 
@@ -219,7 +221,8 @@ class ExpenseRepository(
         amountMinor: Long,
         occurredAt: Long,
         direction: Direction = Direction.DEBIT,
-        remark: String = ""
+        remark: String = "",
+        bankId: Long? = null
     ) = withContext(Dispatchers.IO) {
         val txn = Txn(
             id = Txn.manualId(),
@@ -234,7 +237,8 @@ class ExpenseRepository(
             refNumber = null,
             balanceMinor = null,
             occurredAt = occurredAt,
-            needsReview = false
+            needsReview = false,
+            bankId = bankId
         )
         // Through the keywords, same as a parsed row: typing "biryani" should land in
         // Dining without the user then having to say so.
@@ -253,7 +257,9 @@ class ExpenseRepository(
         occurredAt: Long,
         direction: Direction,
         remark: String = "",
-        autoCategorize: Boolean = true
+        autoCategorize: Boolean = true,
+        /** Only applied to a manual row; a parsed row's account is its sender's. */
+        bankId: Long? = null
     ): String? = withContext(Dispatchers.IO) {
         // Re-read, not the caller's copy: the editor saves the category the moment it is
         // picked, and writing back the snapshot the dialog opened with would undo it.
@@ -267,7 +273,8 @@ class ExpenseRepository(
                 direction = direction,
                 // The user has said what this row is, so it no longer needs review.
                 needsReview = false,
-                userEdited = true
+                userEdited = true,
+                bankId = if (current.isManual) bankId else current.bankId
         )
         // A new remark is a new chance for the keywords: "biryani" typed over a blank
         // should land in Dining without a second tap. Only when the category is still the

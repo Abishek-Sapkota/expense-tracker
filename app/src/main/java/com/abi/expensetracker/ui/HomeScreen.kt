@@ -43,6 +43,7 @@ import com.abi.expensetracker.data.CalendarDates
 import com.abi.expensetracker.data.Money
 import com.abi.expensetracker.data.Period
 import com.abi.expensetracker.data.SplitSummary
+import com.abi.expensetracker.data.model.Bank
 import com.abi.expensetracker.data.model.Category
 import com.abi.expensetracker.data.model.Direction
 import com.abi.expensetracker.data.model.LoanEntry
@@ -87,6 +88,7 @@ fun HomeScreen(
     val selection by vm.selection.collectAsStateWithLifecycle()
     val limitStatus by vm.limitStatus.collectAsStateWithLifecycle()
     val categories by vm.categories.collectAsStateWithLifecycle()
+    val banks by vm.banks.collectAsStateWithLifecycle()
     val status by vm.status.collectAsStateWithLifecycle()
     val nepaliDates by vm.useNepaliCalendar.collectAsStateWithLifecycle()
 
@@ -365,9 +367,10 @@ fun HomeScreen(
             nepaliDates = nepaliDates,
             title = "Add expense",
             confirmLabel = "Add",
+            accounts = banks,
             onDismiss = onAddDialogClose,
-            onConfirm = { amount, date, direction, remark ->
-                vm.addManualExpense(amount, date, direction, remark)
+            onConfirm = { amount, date, direction, remark, bankId ->
+                vm.addManualExpense(amount, date, direction, remark, bankId)
                 onAddDialogClose()
             }
         )
@@ -449,10 +452,16 @@ fun HomeScreen(
             // "kept through a reparse" promise visible where the edit is made.
             note = if (txn.isManual) null
             else "Parsed from a message. Your edit is kept when messages are reparsed.",
+            // A parsed row's account is its sender's; only a manual one is picked here.
+            accounts = if (txn.isManual) banks else null,
+            initialBankId = txn.bankId,
             onDismiss = { editing = null },
-            onConfirm = { amount, date, direction, remark ->
+            onConfirm = { amount, date, direction, remark, bankId ->
                 // A category picked in this dialog is the user's; keywords leave it be.
-                vm.editTransaction(txn, amount, date, direction, remark, autoCategorize = !categoryPicked)
+                vm.editTransaction(
+                    txn, amount, date, direction, remark,
+                    autoCategorize = !categoryPicked, bankId = bankId
+                )
                 editing = null
             }
         )
@@ -504,7 +513,10 @@ private fun TransactionTile(
 
     // The source is the bank the user linked — never the raw sender id, which means
     // nothing to anyone reading their own ledger.
+    // A manual row keeps saying so even with an account picked: it was typed in, not
+    // read from the bank, and that is worth seeing when the numbers disagree.
     val source = when {
+        row.isManual && row.bankName != null -> "${row.bankName} · Added by you"
         row.isManual -> "Added by you"
         row.bankName != null -> row.bankName
         else -> "Unlinked sender"
@@ -702,8 +714,12 @@ private fun ExpenseDialog(
         amount: String,
         date: LocalDate,
         direction: Direction,
-        remark: String
+        remark: String,
+        bankId: Long?
     ) -> Unit,
+    /** The accounts to pick from; null hides the picker (a parsed row's is its sender's). */
+    accounts: List<Bank>? = null,
+    initialBankId: Long? = null,
     categories: List<Category> = emptyList(),
     initialCategoryId: Long? = null,
     onCategoryChange: (Long?) -> Unit = {},
@@ -722,6 +738,7 @@ private fun ExpenseDialog(
     var remark by remember { mutableStateOf(initialRemark) }
     var direction by remember { mutableStateOf(initialDirection) }
     var date by remember { mutableStateOf(initialDate) }
+    var bankId by remember { mutableStateOf(initialBankId) }
     var showDatePicker by remember { mutableStateOf(false) }
 
 
@@ -769,6 +786,25 @@ private fun ExpenseDialog(
                         label = "Received",
                         selected = direction == Direction.CREDIT,
                         onClick = { direction = Direction.CREDIT }
+                    )
+                }
+
+                if (accounts != null) {
+                    Text(
+                        if (direction == Direction.DEBIT) "Paid from" else "Received into",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    val label: (Bank?) -> String = { bank -> bank?.name ?: "Cash / none" }
+                    SearchableDropdown(
+                        selectedLabel = label(accounts.firstOrNull { it.id == bankId }),
+                        // The leading null row is cash, or an account not worth naming.
+                        items = listOf<Bank?>(null) + accounts,
+                        itemLabel = label,
+                        onSelect = { bankId = it?.id },
+                        placeholder = "Search accounts",
+                        emptyText = "No account matches that",
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
 
@@ -859,7 +895,7 @@ private fun ExpenseDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(amount, date, direction, remark) },
+                onClick = { onConfirm(amount, date, direction, remark, bankId) },
                 enabled = amount.isNotBlank(),
                 shape = PillShape
             ) { Text(confirmLabel) }

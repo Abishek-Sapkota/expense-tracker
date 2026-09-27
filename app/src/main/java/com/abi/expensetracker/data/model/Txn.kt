@@ -59,7 +59,16 @@ data class Txn(
      * the message. An edit is the one thing no rule can regenerate, so an edited row is
      * kept through a reparse and never overwritten by the parser again.
      */
-    val userEdited: Boolean = false
+    val userEdited: Boolean = false,
+    /**
+     * The account the user said a manual entry was paid from or into; null for cash or
+     * not given.
+     *
+     * Only manual rows carry it. A parsed row's account comes from its message's sender,
+     * resolved at display time, so linking a sender relabels history without a reparse —
+     * storing it here too would freeze whichever answer was true on the day of parsing.
+     */
+    val bankId: Long? = null
 ) {
     val isManual: Boolean get() = rawId == null
 

@@ -106,6 +106,7 @@ class BackupManager(
                 w.name("needsReview").value(t.needsReview)
                 w.name("ruleId").valueOrNull(t.ruleId)
                 w.name("userEdited").value(t.userEdited)
+                w.name("bankId").valueOrNull(t.bankId)
                 w.endObject()
             }
             w.endArray()
@@ -368,6 +369,7 @@ class BackupManager(
             var occurredAt = 0L; var categoryId: Long? = null
             var needsReview = false; var ruleId: Long? = null
             var userEdited = false
+            var bankId: Long? = null
 
             r.beginObject()
             while (r.hasNext()) {
@@ -389,6 +391,8 @@ class BackupManager(
                     "ruleId" -> ruleId = r.nextLongOrNull()
                     // Absent in schema 3 and older, where nothing could be edited.
                     "userEdited" -> userEdited = r.nextBoolean()
+                    // Absent before schema 11, when a manual entry named no account.
+                    "bankId" -> bankId = r.nextLongOrNull()
                     else -> r.skipValue()
                 }
             }
@@ -412,7 +416,8 @@ class BackupManager(
                     categoryId = categoryId,
                     needsReview = needsReview,
                     ruleId = ruleId,
-                    userEdited = userEdited
+                    userEdited = userEdited,
+                    bankId = bankId
                 )
                 count++
             }
