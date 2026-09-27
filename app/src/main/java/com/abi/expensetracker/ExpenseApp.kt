@@ -30,13 +30,11 @@ class ExpenseApp : Application() {
             val installed = packageManager.getPackageInfo(packageName, 0).lastUpdateTime
             if (settings.maintenanceStampOnce() == installed) return@launch
 
-            // Copies stored before the ingest guard existed, and the transactions they
-            // produced, go together: dropping the message alone would leave its row in
-            // the ledger with nothing behind it.
-            val removed = repository.removeDuplicateMessages()
             // A build that adds a parsing rule has to reread what the old rules could not
             // parse; a build that changes parsing or de-duplication bumps PARSER_VERSION.
-            if (repository.syncBuiltInRules() || removed > 0 || repository.parserOutdated()) {
+            // Stored messages are never deleted here: a delete cascaded to the row built
+            // from it, edited or linked to a loan or not.
+            if (repository.syncBuiltInRules() || repository.parserOutdated()) {
                 repository.reparseAll()
             }
             // Catches history that predates categories. Category edits and backup imports

@@ -74,12 +74,16 @@ data class Txn(
 
     companion object {
         /**
-         * Prefer the bank's own reference number: the same transaction often arrives
-         * twice (SMS plus app notification) with different wording but one ref.
+         * One id per message, never per reference number.
+         *
+         * Keying on the ref let two messages share an id, and the second then replaced the
+         * first: the row jumped to the other message, a word misread as a ref ("Ref Khaja")
+         * merged payments days apart, and a reparse that newly found a ref changed the id
+         * under a loan linked to it. The same movement reported on two channels is folded
+         * by [com.abi.expensetracker.data.DuplicateMatcher] instead, where a shared ref is
+         * one of the signals.
          */
-        fun idFor(refNumber: String?, amountMinor: Long, rawId: String): String =
-            if (!refNumber.isNullOrBlank()) StableId.sha256("ref|$refNumber|$amountMinor")
-            else StableId.sha256("raw|$rawId")
+        fun idFor(rawId: String): String = StableId.sha256("raw|$rawId")
 
         /**
          * Random, not content-derived: two genuine cash expenses of the same amount on

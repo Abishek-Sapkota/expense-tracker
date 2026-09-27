@@ -36,20 +36,28 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.withContext
 
 /**
- * How far apart two identical messages may be and still count as one.
+ * How far apart two identical messages may be and still count as one, for live messages.
  *
- * Six hours, not a few seconds: a message received while the phone was off reaches the
- * inbox with the receipt time and the broadcast with the SMSC time, and those can sit
- * hours apart. Two genuinely separate payments carry different reference numbers or a
- * different balance, so their text is not identical to the byte.
+ * The inbox and the live broadcast both stamp an SMS with its SMSC time, so the two paths
+ * give one SMS one id and the database drops the second outright. This window only has to
+ * catch an app updating a notification it already posted, which happens within minutes.
+ * It is short because a longer one threw away a genuine second payment whose text was
+ * identical, such as two same-price wallet payments in one afternoon.
  */
-private const val DUPLICATE_WINDOW_MILLIS = 6 * 60 * 60 * 1000L
+private const val DUPLICATE_WINDOW_MILLIS = 15 * 60 * 1000L
+
+/**
+ * The same, for an inbox history read. Builds before the SMSC clock was used stored inbox
+ * copies under the receipt time, which trails the SMSC time by hours for a message that
+ * arrived while the phone was off, so a rescan must still recognise those.
+ */
+private const val HISTORY_DUPLICATE_WINDOW_MILLIS = 6 * 60 * 60 * 1000L
 
 /**
  * Bump when parsing or de-duplication logic changes, so the next start reparses stored
  * messages under the new logic instead of leaving history as the old code read it.
  */
-const val PARSER_VERSION = 1
+const val PARSER_VERSION = 2
 
 class ExpenseRepository(
     private val context: Context,
@@ -439,23 +447,24 @@ class ExpenseRepository(
     private suspend fun insertParsed(parsed: List<Pair<Txn, String>>): List<Txn> {
         if (parsed.isEmpty()) return emptyList()
         return db.withTransaction {
-            val edited = db.txnDao().editedIds().toSet()
-            // Copies attached to an edited row survive a reparse; their messages must not
-            // come back as transactions of their own.
+            // A message already behind a row, or folded into one as a copy, is never booked
+            // again. After a reparse those rows are the ones it keeps (edited or linked to
+            // a loan or split); on ingest it is anything booked before.
+            val owned = db.txnDao().bookedRawIds().toMutableSet()
             val absorbed = db.txnCopyDao().allRawIds().toMutableSet()
             val flags = db.messageFlagDao().all().associateBy { it.rawId }
             val inserted = mutableListOf<Txn>()
             for ((txn, sender) in parsed.sortedBy { it.first.occurredAt }) {
                 val rawId = txn.rawId ?: continue
-                if (txn.id in edited || rawId in absorbed) continue
+                if (rawId in owned || rawId in absorbed) continue
                 val flag = flags[rawId]
                 if (flag?.deleted == true) continue
                 val original = if (flag?.notDuplicate == true) null else findOriginal(txn, sender)
                 if (original != null) {
                     db.txnCopyDao().insert(TxnCopy(rawId = rawId, txnId = original.id))
                     absorbed += rawId
-                } else {
-                    db.txnDao().insert(txn)
+                } else if (db.txnDao().insertIfAbsent(txn) != -1L) {
+                    owned += rawId
                     inserted += txn
                 }
             }
@@ -497,17 +506,6 @@ class ExpenseRepository(
      * Returns true when anything changed, so the caller can reparse and show the user the
      * transactions the new rules find.
      */
-    /**
-     * Removes copies of a message that the two ingest paths stored under different times.
-     *
-     * Returns how many went, so the caller can reparse and drop the transactions they had
-     * produced. Cheap and idempotent: once the ingest guard has been in place for a sync
-     * cycle it finds nothing.
-     */
-    suspend fun removeDuplicateMessages(): Int = withContext(Dispatchers.IO) {
-        db.rawMessageDao().deleteNearDuplicates(DUPLICATE_WINDOW_MILLIS)
-    }
-
     suspend fun syncBuiltInRules(): Boolean = withContext(Dispatchers.IO) {
         val existing = db.ruleDao().all().filter { it.builtIn }.associateBy { it.name }
         val merged = DefaultRules.ALL.map { seed ->
@@ -589,17 +587,32 @@ class ExpenseRepository(
      * transactions was for would post four hundred notifications, and nobody remembers
      * last March anyway. Live messages ask; history does not.
      */
-    suspend fun ingest(messages: List<RawMessage>, prompt: Boolean = true): Int =
+    suspend fun ingest(
+        messages: List<RawMessage>,
+        prompt: Boolean = true,
+        duplicateWindowMillis: Long = DUPLICATE_WINDOW_MILLIS
+    ): Int =
         withContext(Dispatchers.IO) {
-            val messages = messages.filter { message ->
-                db.rawMessageDao().duplicateOf(
+            // Also against the rest of this batch: two copies of one message in a single
+            // history read would both pass a check that only looks at the database.
+            val kept = mutableListOf<RawMessage>()
+            val candidates = messages.filter { message ->
+                val stored = db.rawMessageDao().duplicateOf(
                     sender = message.sender,
                     body = message.body,
-                    from = message.sentAt - DUPLICATE_WINDOW_MILLIS,
-                    to = message.sentAt + DUPLICATE_WINDOW_MILLIS
-                ) == null
+                    from = message.sentAt - duplicateWindowMillis,
+                    to = message.sentAt + duplicateWindowMillis
+                )
+                val inBatch = kept.any {
+                    it.sender == message.sender && it.body == message.body &&
+                        kotlin.math.abs(it.sentAt - message.sentAt) <= duplicateWindowMillis
+                }
+                (stored == null && !inBatch).also { if (it) kept += message }
             }
-            db.rawMessageDao().insertAll(messages)
+            // Only what was actually new is parsed. A message already stored under this id
+            // has had its turn; parsing it again rebuilt its transaction over the old one.
+            val insertedIds = db.rawMessageDao().insertAll(candidates)
+            val messages = candidates.filterIndexed { i, _ -> insertedIds[i] != -1L }
             val parser = SmsParser(db.ruleDao().enabled())
             val byTxn = mutableMapOf<String, RawMessage>()
             val parsed = messages.mapNotNull { message ->
@@ -665,10 +678,12 @@ class ExpenseRepository(
             var read = 0
             var newest = since
 
-            SmsInboxReader.read(context, since) { batch ->
+            SmsInboxReader.read(context, since) { batch, newestReceipt ->
                 read += batch.size
-                batch.maxOfOrNull { it.sentAt }?.let { if (it > newest) newest = it }
-                ingest(batch, prompt = false)
+                if (newestReceipt > newest) newest = newestReceipt
+                // History can hold copies stored by older builds on the receipt clock, and
+                // those sit up to hours from the SMSC time this read now uses.
+                ingest(batch, prompt = false, duplicateWindowMillis = HISTORY_DUPLICATE_WINDOW_MILLIS)
             }
 
             if (newest > since) settings.setLastSyncedSmsDate(newest)

@@ -20,11 +20,13 @@ class DuplicateMatcherTest {
         direction: Direction = Direction.DEBIT,
         remark: String? = null,
         rawId: String? = "raw-$id",
-        userEdited: Boolean = false
+        userEdited: Boolean = false,
+        ref: String? = null,
+        balance: Long? = null
     ) = Txn(
         id = id, rawId = rawId, amountMinor = amountMinor, direction = direction,
-        accountTail = null, merchant = null, remark = remark, refNumber = null,
-        balanceMinor = null, occurredAt = at, userEdited = userEdited
+        accountTail = null, merchant = null, remark = remark, refNumber = ref,
+        balanceMinor = balance, occurredAt = at, userEdited = userEdited
     )
 
     private val sms = txn("sms", remark = "16682242fx7C,2222160005194089/90801352")
@@ -100,5 +102,19 @@ class DuplicateMatcherTest {
         assertTrue(DuplicateMatcher.remarksCompatible(null, "x"))
         assertTrue(DuplicateMatcher.remarksCompatible("coffee,0070", "COFFEE"))
         assertFalse(DuplicateMatcher.remarksCompatible("coffee", "khaja"))
+    }
+
+    @Test
+    fun `one reference number folds copies whose remarks differ`() {
+        val a = txn("a", remark = "KHALTI", ref = "M3WOXYQPC3Q")
+        val b = txn("b", at = 5 * minute, remark = "Momo", ref = "m3woxyqpc3q")
+        assertEquals(a, find(b, "COM.GLOBAL", Candidate(a, "GBIME_ALERT", emptySet())))
+    }
+
+    @Test
+    fun `different balances are two payments`() {
+        val a = txn("a", balance = 100_000)
+        val b = txn("b", at = 5 * minute, balance = 82_500)
+        assertNull(find(b, "COM.F1SOFT.ESEWA", Candidate(a, "NABIL", emptySet())))
     }
 }

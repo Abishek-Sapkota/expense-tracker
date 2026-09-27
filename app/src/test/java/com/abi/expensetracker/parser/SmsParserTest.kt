@@ -107,12 +107,40 @@ class SmsParserTest {
     }
 
     @Test
-    fun `same reference number yields the same id so duplicates collapse`() {
+    fun `two messages sharing a reference number keep their own ids`() {
+        // Folding the pair is DuplicateMatcher's job; a shared id made the second message
+        // replace the first row outright.
         val fromSms = parse("Rs.450.00 debited from a/c XX1234 to SWIGGY. Ref 123456789.")
         val fromApp = parse("NPR 450.00 spent at SWIGGY. Reference No 123456789")
         val a = (fromSms as ParseOutcome.Parsed).txn
         val b = (fromApp as ParseOutcome.Parsed).txn
-        assertEquals(a.id, b.id)
+        assertEquals("123456789", a.refNumber)
+        assertEquals(a.refNumber, b.refNumber)
+        assertFalse(a.id == b.id)
+    }
+
+    @Test
+    fun `a word after Ref is not a reference number`() {
+        val txn = (parse("Rs.500.00 debited from a/c XX1234. Remarks: Ref Khaja") as ParseOutcome.Parsed).txn
+        assertNull(txn.refNumber)
+    }
+
+    @Test
+    fun `a failed wallet payment is not booked`() {
+        assertEquals(
+            ParseOutcome.NoMatch,
+            parse("Your transaction of Rs. 500.00 to ABC Store was unsuccessful.")
+        )
+        assertEquals(
+            ParseOutcome.NoMatch,
+            parse("Your transaction of Rs. 500.00 to ABC Store could not be completed.")
+        )
+    }
+
+    @Test
+    fun `a completed wallet payment is still booked`() {
+        val out = parse("Your transaction of Rs. 20.0 to ABC Store has been successfully completed.")
+        assertEquals(2_000L, (out as ParseOutcome.Parsed).txn.amountMinor)
     }
 
     @Test

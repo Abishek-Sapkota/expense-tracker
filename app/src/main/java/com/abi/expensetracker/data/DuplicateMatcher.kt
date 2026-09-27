@@ -45,12 +45,24 @@ object DuplicateMatcher {
                     abs(c.txn.occurredAt - txn.occurredAt) <= WINDOW_MILLIS &&
                     c.senderKey != senderKey &&
                     senderKey !in c.copySenderKeys &&
-                    // A hand-edited remark is the user's words, not the bank's, so it
-                    // says nothing about whether the messages match.
-                    (c.txn.userEdited || remarksCompatible(c.txn.remark, txn.remark))
+                    // The balance after the movement is the same on every channel that
+                    // reports it, so two different balances are two payments.
+                    !(c.txn.balanceMinor != null && txn.balanceMinor != null &&
+                        c.txn.balanceMinor != txn.balanceMinor) &&
+                    // One reference number on both is the strongest sign of one movement,
+                    // and outranks remarks the two channels word differently. Differing
+                    // refs are not taken as proof of two: banks and wallets print their
+                    // own references for the same transfer.
+                    (sameRef(c.txn.refNumber, txn.refNumber) ||
+                        // A hand-edited remark is the user's words, not the bank's, so it
+                        // says nothing about whether the messages match.
+                        c.txn.userEdited || remarksCompatible(c.txn.remark, txn.remark))
             }
             .minByOrNull { abs(it.txn.occurredAt - txn.occurredAt) }
             ?.txn
+
+    fun sameRef(a: String?, b: String?): Boolean =
+        !a.isNullOrBlank() && !b.isNullOrBlank() && a.equals(b, ignoreCase = true)
 
     fun remarksCompatible(a: String?, b: String?): Boolean {
         val x = leadToken(a) ?: return true

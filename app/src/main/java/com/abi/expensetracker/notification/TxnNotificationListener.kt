@@ -99,9 +99,11 @@ class TxnNotificationListener : NotificationListenerService() {
         if (!NotificationIngest.looksFinancial(body)) return null
 
         return RawMessage(
-            // Content-addressed rather than keyed on the post time: an app that updates or
-            // re-posts the same notification would otherwise book the transaction twice.
-            id = RawMessage.idForContent(sbn.packageName, body),
+            // Keyed on the post time as well as the text: a wallet sends the same sentence
+            // for two same-price payments days apart, and a content-only id made the second
+            // one the first. A re-post of one notification keeps its post time when the
+            // listener reconnects, and a quick update is caught by the ingest guard.
+            id = RawMessage.idFor(sbn.packageName, body, sbn.postTime),
             // The package name. Settings folds senders onto banks, so the user names it
             // once there and the ledger shows the bank from then on.
             sender = sbn.packageName,

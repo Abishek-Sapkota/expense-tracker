@@ -41,7 +41,9 @@ convention listed here, update the matching line in the same change.
   txns linked to a loan entry), `TxnWithSender` + query result classes.
 - `data/ExpenseRepository.kt` — single data API used by ViewModels (ingest, reparse,
   categorise, edit, backfill). `insertParsed` de-duplicates across channels via
-  `DuplicateMatcher`; `PARSER_VERSION` bump forces a reparse on next app start.
+  `DuplicateMatcher`; `ingest` parses only newly stored messages (15 min same-text guard
+  live, 6 h for inbox history reads, which use the SMSC `DATE_SENT` clock like the live
+  broadcast; notification ids include `postTime`); `PARSER_VERSION` bump forces a reparse on next app start.
   `observeSpentBetween` = debits − split recoveries (repayments on split bills, capped,
   dated on the bill); Trends subtracts `observeSplitRecoveries` per day/category.
   `deleteTransaction` flags parsed messages (+ copies) deleted; `markNotDuplicate` flags,
@@ -54,8 +56,10 @@ convention listed here, update the matching line in the same change.
   `CategoryColors` (24-colour palette; `Category.color` or a stable default by id;
   `nextFree` for new ones; Uncategorised is grey), `Categorizer` (keyword auto-category), `DuplicateMatcher` (SMS vs
   email/notification copy of same txn: same amount+direction, ±60 min, different sender,
-  one copy per sender, remark lead token must agree; user-edited rows are never merged
-  by reparse). One SMS can also arrive as a `com.google.android.apps.messaging`
+  one copy per sender, differing balances reject, a shared ref accepts, else remark lead
+  token must agree). Txn ids are one per message (`Txn.idFor(rawId)`), never per ref;
+  `insertParsed` never re-books a message already behind a row or copy and never
+  replaces a row. Reparse keeps edited rows and rows linked to a loan or split. One SMS can also arrive as a `com.google.android.apps.messaging`
   notification, and banks email via `com.google.android.gm`. `BankResolver` (SMS: sender link only; notification package: account named in the
   app's label first, else account name in the message body, longest name wins),
   `SenderNormalizer`, `SettingsStore` (DataStore), `StableId` (sha256 ids).

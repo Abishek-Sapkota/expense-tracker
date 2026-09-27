@@ -57,7 +57,7 @@ class SmsParser(
 
             return ParseOutcome.Parsed(
                 Txn(
-                    id = Txn.idFor(refNumber, amountMinor, message.id),
+                    id = Txn.idFor(message.id),
                     rawId = message.id,
                     amountMinor = amountMinor,
                     direction = c.rule.direction,

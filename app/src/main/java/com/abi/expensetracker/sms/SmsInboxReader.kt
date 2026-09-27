@@ -14,19 +14,23 @@ object SmsInboxReader {
 
     /**
      * @param since epoch millis watermark, exclusive. 0 reads everything available.
-     * @param onBatch called per chunk so a multi-year inbox is never held in memory at once.
+     * @param onBatch called per chunk so a multi-year inbox is never held in memory at once,
+     *   with the newest receipt time in the chunk. That, not a message's [RawMessage.sentAt]
+     *   (the SMSC time), is the watermark to pass back as [since]: the query filters on
+     *   receipt time, and an SMSC clock set in the future would otherwise skip messages.
      */
     suspend fun read(
         context: Context,
         since: Long = 0L,
         batchSize: Int = 500,
-        onBatch: suspend (List<RawMessage>) -> Unit
+        onBatch: suspend (List<RawMessage>, Long) -> Unit
     ): Int {
         val projection = arrayOf(
             Telephony.Sms._ID,
             Telephony.Sms.ADDRESS,
             Telephony.Sms.BODY,
-            Telephony.Sms.DATE
+            Telephony.Sms.DATE,
+            Telephony.Sms.DATE_SENT
         )
 
         val cursor = context.contentResolver.query(
@@ -42,14 +46,21 @@ object SmsInboxReader {
             val iAddress = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
             val iBody = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
             val iDate = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
+            val iDateSent = c.getColumnIndexOrThrow(Telephony.Sms.DATE_SENT)
 
             val now = System.currentTimeMillis()
             val batch = ArrayList<RawMessage>(batchSize)
+            var newestReceipt = since
 
             while (c.moveToNext()) {
                 val sender = c.getString(iAddress) ?: continue
                 val body = c.getString(iBody) ?: continue
-                val sentAt = c.getLong(iDate)
+                // The SMSC time, which is what the live broadcast stamps the same message
+                // with, so both paths give it one id. The receipt time only when the
+                // provider has no SMSC time (some OEMs leave it 0).
+                val receivedAt = c.getLong(iDate)
+                newestReceipt = maxOf(newestReceipt, receivedAt)
+                val sentAt = c.getLong(iDateSent).takeIf { it > 0 } ?: receivedAt
 
                 batch += RawMessage(
                     id = RawMessage.idFor(sender, body, sentAt),
@@ -61,14 +72,14 @@ object SmsInboxReader {
                 )
 
                 if (batch.size >= batchSize) {
-                    onBatch(batch.toList())
+                    onBatch(batch.toList(), newestReceipt)
                     total += batch.size
                     batch.clear()
                 }
             }
 
             if (batch.isNotEmpty()) {
-                onBatch(batch.toList())
+                onBatch(batch.toList(), newestReceipt)
                 total += batch.size
             }
         }

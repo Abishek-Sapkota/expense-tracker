@@ -16,7 +16,7 @@ object FieldExtractors {
     )
 
     private val REF = Regex(
-        """(?i)\b(?:ref(?:erence)?(?:\s*(?:no|num|number|id))?|txn\s*(?:id|no|number)|transaction\s*id|upi\s*ref(?:\s*no)?)\b[:.\s#]*([A-Za-z0-9]{4,24})\b"""
+        """(?i)\b(?:ref(?:erence)?(?:\s*(?:no|num|number|id))?|txn\s*(?:id|no|number)|transaction\s*id|upi\s*ref(?:\s*no)?)\b[:.\s#]*((?=[A-Za-z]*\d)[A-Za-z0-9]{4,24})\b"""
     )
 
     private val BALANCE = Regex(

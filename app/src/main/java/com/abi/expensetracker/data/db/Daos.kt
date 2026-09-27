@@ -73,16 +73,6 @@ interface RawMessageDao {
     )
     suspend fun duplicateOf(sender: String, body: String, from: Long, to: Long): String?
 
-    /** Drops copies stored before the guard existed, keeping the earliest of each. */
-    @Query(
-        "DELETE FROM raw_messages WHERE EXISTS (" +
-            "SELECT 1 FROM raw_messages o " +
-            "WHERE o.sender = raw_messages.sender AND o.body = raw_messages.body " +
-            "AND o.sentAt < raw_messages.sentAt " +
-            "AND raw_messages.sentAt - o.sentAt <= :windowMillis)"
-    )
-    suspend fun deleteNearDuplicates(windowMillis: Long): Int
-
     @Query("SELECT * FROM raw_messages WHERE id = :id")
     suspend fun byId(id: String): RawMessage?
 
@@ -112,6 +102,13 @@ interface TxnDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(txn: Txn)
+
+    /**
+     * For parsed rows: never over an existing one. Returns -1 when the id was taken.
+     * REPLACE here let a second parse of a message rebuild its row over the user's edits.
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIfAbsent(txn: Txn): Long
 
     @Update
     suspend fun update(txn: Txn)
@@ -211,8 +208,8 @@ interface TxnDao {
     @Query("UPDATE transactions SET bankId = NULL WHERE bankId = :bankId")
     suspend fun clearBank(bankId: Long)
 
-    @Query("SELECT id FROM transactions WHERE userEdited = 1")
-    suspend fun editedIds(): List<String>
+    @Query("SELECT rawId FROM transactions WHERE rawId IS NOT NULL")
+    suspend fun bookedRawIds(): List<String>
 
     @Query("DELETE FROM transactions")
     suspend fun deleteAll()
@@ -220,9 +217,15 @@ interface TxnDao {
     /**
      * Reparse rebuilds only what was derived from messages. Manual entries have no
      * message behind them, and hand-corrected rows would lose the correction, so both
-     * are kept.
+     * are kept. So are rows a loan entry or a split points at: a rebuilt row can come back
+     * under another id (the other channel's message now read first), and the link would
+     * then point at nothing, counting a loan as spending again.
      */
-    @Query("DELETE FROM transactions WHERE rawId IS NOT NULL AND userEdited = 0")
+    @Query(
+        "DELETE FROM transactions WHERE rawId IS NOT NULL AND userEdited = 0 " +
+            "AND id NOT IN (SELECT txnId FROM loan_entries WHERE txnId IS NOT NULL) " +
+            "AND id NOT IN (SELECT txnId FROM splits)"
+    )
     suspend fun deleteParsed()
 
     /** Parsed rows that a new message of this amount and direction could be a copy of. */

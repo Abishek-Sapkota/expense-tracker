@@ -83,7 +83,9 @@ object DefaultRules {
         Rule(
             name = "Wallet payment completed",
             senderPattern = ANY_SENDER,
-            bodyPattern = """(?i)transaction\s+of\s+$CUR\s*$AMOUNT\b(?=[\s\S]{0,120}?(?:success|complete))""",
+            // Whole words, and nothing saying it failed: a substring test booked "was
+            // unsuccessful" and "could not be completed" as money spent.
+            bodyPattern = """(?i)transaction\s+of\s+$CUR\s*$AMOUNT\b(?![\s\S]{0,160}?\b(?:unsuccessful|failed|declined|reversed|not\s+(?:been\s+|be\s+)?(?:successful|completed?)|could\s+not)\b)(?=[\s\S]{0,120}?\b(?:successful(?:ly)?|completed)\b)""",
             direction = Direction.DEBIT,
             priority = 930,
             builtIn = true
