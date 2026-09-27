@@ -12,12 +12,17 @@ convention listed here, update the matching line in the same change.
 - JDK 17: prefix Gradle with `JAVA_HOME=/usr/lib/jvm/java-17-openjdk`.
 - Gradle wrapper pins 8.9 (AGP 8.7.2, Kotlin 2.0.21, Compose BOM 2024.10.01, Room 2.6.1).
 - `./gradlew compileDebugKotlin` — fastest compile check.
-- `./gradlew test` — JVM unit tests (parser, data), no device.
-- `./gradlew installDebug` — build + install to the adb-connected device.
+- `./gradlew test` — JVM unit tests, no device: pure parser/data tests plus Robolectric
+  tests for Room migrations 1→latest (`db/MigrationTest`, schemas served as debug assets),
+  the repository (`db/RepositoryTest`) and backup round trips (`backup/BackupRoundTripTest`).
+  Add a migration test case with every schema bump.
+- `./gradlew installDebug` — build + install to the adb-connected device. The owner's phone
+  runs the keystore-signed release, so a debug build cannot install over it (no
+  instrumented tests on that phone).
 - `./gradlew assembleRelease` — R8-minified release (≈2 MB), much smoother than debug;
   install with `adb install -r app/build/outputs/apk/release/app-release.apk`. Signed from
-  a gitignored `keystore.properties` if present, else with the debug key (so it replaces
-  the debug build without an uninstall). `profileinstaller` applies library baseline
+  a gitignored `keystore.properties`; without it the release build fails unless
+  `-PallowDebugSigning` is passed. `profileinstaller` applies library baseline
   profiles. Judge performance on release builds only.
 - `design/` is gitignored (local only, not on GitHub).
 

@@ -7,6 +7,9 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val keystoreFile = rootProject.file("keystore.properties")
+val allowDebugSigning = project.hasProperty("allowDebugSigning")
+
 android {
     namespace = "com.abi.expensetracker"
     compileSdk = 35
@@ -20,11 +23,12 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // Release signing comes from keystore.properties (gitignored) when it exists:
+    // Release signing comes from keystore.properties (gitignored):
     //   storeFile=/path/to/release.jks  storePassword=…  keyAlias=…  keyPassword=…
-    // Without it the release build is signed with the debug key, so it installs over the
-    // debug build on a test phone without an uninstall (which would wipe the database).
-    val keystoreFile = rootProject.file("keystore.properties")
+    // Without it a release build fails (see the check at the end of this file) instead of
+    // quietly signing with the debug key: a phone that once took a debug-signed release
+    // refuses the properly signed one without an uninstall, and with allowBackup off an
+    // uninstall wipes the database. -PallowDebugSigning signs a throwaway one on purpose.
     signingConfigs {
         if (keystoreFile.exists()) {
             create("release") {
@@ -44,7 +48,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release")
+                ?: if (allowDebugSigning) signingConfigs.getByName("debug") else null
         }
     }
 
@@ -59,6 +64,15 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    // Room's exported schemas as debug assets, so the Robolectric migration test can build
+    // each old version (Robolectric reads the variant's assets, not the test set's). A few
+    // kilobytes in the debug APK only; the release build does not carry them.
+    sourceSets.getByName("debug").assets.srcDir("$projectDir/schemas")
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
     }
 
     packaging {
@@ -100,4 +114,22 @@ dependencies {
     implementation(libs.androidx.profileinstaller)
 
     testImplementation(libs.junit)
+    // Room, JsonReader and the backup code on the JVM, without a device: an instrumented
+    // test needs a debug APK on the phone, which cannot install over the signed release.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.kotlinx.coroutines.test)
+}
+
+// Fail an unsigned release loudly rather than leave an unsigned APK to be missed.
+tasks.matching { it.name == "assembleRelease" || it.name == "installRelease" }.configureEach {
+    doFirst {
+        if (!keystoreFile.exists() && !allowDebugSigning) {
+            throw GradleException(
+                "No keystore.properties: refusing to build a release that later updates " +
+                    "could not install over. Add it, or pass -PallowDebugSigning."
+            )
+        }
+    }
 }
