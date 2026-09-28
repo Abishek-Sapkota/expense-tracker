@@ -17,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import com.abi.expensetracker.data.model.Category
 import com.abi.expensetracker.ui.components.LedgerCard
 import com.abi.expensetracker.ui.components.Monogram
@@ -44,6 +46,9 @@ fun CategorySettings(
 ) {
     /** The category being edited, or null when that editor is closed. */
     var editing by remember { mutableStateOf<Category?>(null) }
+    /** The category whose delete is waiting on a confirm. */
+    var deleting by remember { mutableStateOf<Category?>(null) }
+    var confirmApply by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -54,16 +59,35 @@ fun CategorySettings(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
-                onClick = onApplyKeywords,
-                enabled = !busy,
-                shape = PillShape
-            ) { Text("Apply to uncategorised") }
+        LedgerCard {
+            Row(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Apply to uncategorised", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "New keywords only file new transactions. This files the older " +
+                            "ones that have no category yet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                OutlinedButton(
+                    onClick = { confirmApply = true },
+                    enabled = !busy,
+                    shape = PillShape
+                ) { Text("Apply") }
+            }
         }
 
         categories.forEach { category ->
-            CategoryRow(category = category, onClick = { editing = category })
+            CategoryRow(
+                category = category,
+                onClick = { editing = category },
+                onDelete = { deleting = category }
+            )
         }
 
         if (categories.isEmpty()) {
@@ -87,7 +111,6 @@ fun CategorySettings(
                 onAdd(name, keywords, color)
                 onAddingChange(false)
             },
-            onDelete = null
         )
     }
 
@@ -98,17 +121,68 @@ fun CategorySettings(
             onSave = { name, keywords, color ->
                 onUpdate(category.copy(name = name, icon = "", keywords = keywords, color = color))
                 editing = null
-            },
-            onDelete = {
-                onDelete(category.id)
-                editing = null
             }
+        )
+    }
+
+    // Asked first because it writes to many rows at once, and those rows then carry
+    // categories until each is changed by hand.
+    if (confirmApply) {
+        AlertDialog(
+            onDismissRequest = { confirmApply = false },
+            shape = MaterialTheme.shapes.extraLarge,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            title = { Text("Apply keywords?") },
+            text = {
+                Text(
+                    "Every transaction without a category is checked against your keywords " +
+                        "and filed under the category whose keyword it contains. Transactions " +
+                        "that already have a category are not changed, and ones no keyword " +
+                        "matches stay uncategorised."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onApplyKeywords()
+                        confirmApply = false
+                    },
+                    shape = PillShape
+                ) { Text("Apply") }
+            },
+            dismissButton = { TextButton(onClick = { confirmApply = false }) { Text("Cancel") } }
+        )
+    }
+
+    // Asked first because the button sits on the list, one slip from a row tap, and a
+    // delete strips the category from every transaction filed under it.
+    deleting?.let { category ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            shape = MaterialTheme.shapes.extraLarge,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            title = { Text("Delete ${category.name}?") },
+            text = { Text("Transactions filed under it become uncategorised.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDelete(category.id)
+                        deleting = null
+                    },
+                    shape = PillShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } }
         )
     }
 }
 
 @Composable
-private fun CategoryRow(category: Category, onClick: () -> Unit) {
+private fun CategoryRow(category: Category, onClick: () -> Unit, onDelete: () -> Unit) {
     LedgerCard(Modifier.clickable(onClick = onClick)) {
         Row(
             Modifier.fillMaxWidth().padding(12.dp),
@@ -136,19 +210,26 @@ private fun CategoryRow(category: Category, onClick: () -> Unit) {
                     .background(MaterialTheme.colorScheme.surfaceContainerHighest, ChipShape)
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             )
+            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete ${category.name}",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
 
-/** Add and edit are the same form; only the delete button and the title differ. */
+/** Add and edit are the same form; only the title differs. Delete lives on the list row. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CategoryEditorDialog(
     category: Category?,
     existing: List<Category> = emptyList(),
     onDismiss: () -> Unit,
-    onSave: (name: String, keywords: String, color: Int?) -> Unit,
-    onDelete: (() -> Unit)?
+    onSave: (name: String, keywords: String, color: Int?) -> Unit
 ) {
     var name by remember { mutableStateOf(category?.name.orEmpty()) }
     var color by remember { mutableStateOf(category?.let { CategoryColors.of(it) } ?: CategoryColors.nextFree(existing)) }
@@ -206,11 +287,6 @@ private fun CategoryEditorDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (onDelete != null) {
-                    TextButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
-                        Text("Delete category", color = MaterialTheme.colorScheme.error)
-                    }
-                }
             }
         },
         confirmButton = {

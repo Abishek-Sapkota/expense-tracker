@@ -68,6 +68,7 @@ import com.abi.expensetracker.data.model.LimitStatus
 import com.abi.expensetracker.data.model.SpendingLimit
 import com.abi.expensetracker.ui.components.LedgerCard
 import com.abi.expensetracker.ui.components.AddFab
+import com.abi.expensetracker.ui.components.AddFabClearance
 import com.abi.expensetracker.ui.components.PermissionCard
 import com.abi.expensetracker.ui.components.rememberNotificationAccessState
 import com.abi.expensetracker.ui.components.rememberPostNotificationsState
@@ -185,9 +186,12 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .padding(padding)
-                .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 4.dp)
                 .fillMaxSize()
-                .verticalScroll(scroll),
+                .verticalScroll(scroll)
+                // Inside the scroll, so it adds room at the end of the content rather
+                // than shrinking the viewport; Categories needs room to clear its Add.
+                .padding(bottom = if (section == SettingsSection.CATEGORIES) AddFabClearance else 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Opening a section slides it in from the right and back returns it; a

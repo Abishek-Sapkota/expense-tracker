@@ -21,6 +21,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.foundation.horizontalScroll
 import com.abi.expensetracker.ui.components.StatusChip
 import com.abi.expensetracker.ui.components.AddFab
+import com.abi.expensetracker.ui.components.AddFabClearance
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Surface
 import androidx.compose.material3.FilledTonalButton
@@ -157,7 +158,7 @@ fun LoansScreen(vm: LoansViewModel = viewModel(), resetSignal: Int = 0) {
         LazyColumn(
             state = listState,
             modifier = Modifier.padding(padding).fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = AddFabClearance),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             if (person == null) {

@@ -21,6 +21,20 @@ import androidx.compose.foundation.clickable
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
+import kotlin.math.atan2
+import kotlin.math.sqrt
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
@@ -72,6 +86,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.abi.expensetracker.data.Money
 import com.abi.expensetracker.ui.components.LedgerCard
+import com.abi.expensetracker.ui.components.countUpMinor
 import com.abi.expensetracker.ui.components.Monogram
 import com.abi.expensetracker.ui.components.SectionHeader
 import com.abi.expensetracker.ui.theme.AppTheme
@@ -94,6 +109,7 @@ fun TrendsScreen(vm: TrendsViewModel = viewModel(), resetSignal: Int = 0) {
     val canGoForward by vm.canGoForward.collectAsStateWithLifecycle()
     val openCategory by vm.openCategory.collectAsStateWithLifecycle()
     val uncategorised by vm.uncategorisedCount.collectAsStateWithLifecycle()
+    val chart by vm.chart.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     var sorting by rememberSaveable { mutableStateOf(false) }
 
@@ -184,7 +200,7 @@ fun TrendsScreen(vm: TrendsViewModel = viewModel(), resetSignal: Int = 0) {
             }
 
             item { MonthTotalCard(state) }
-            item { DailySpendCard(state, window) }
+            item { ChartCard(state, window, chart, onChart = vm::setChart) }
             // The chevrons already say the rows open; the loans/splits note lives once, in
             // the total card, and only when it changed the number.
             item { SectionHeader(title = "By category") }
@@ -253,8 +269,8 @@ private fun MonthTotalCard(state: TrendsState) {
                 )
             }
             Text(
-                Money.format(state.totalMinor),
-                style = MaterialTheme.typography.displayMedium,
+                Money.format(countUpMinor("trends-total", state.totalMinor) ?: state.totalMinor),
+                style = MaterialTheme.typography.displayMedium.merge(LocalTabularStyle.current),
                 color = MaterialTheme.colorScheme.primary
             )
             if (change != null) {
@@ -315,66 +331,238 @@ private fun MonthTotalCard(state: TrendsState) {
     }
 }
 
-/** One bar per day of the month, the busiest in the accent, the rest in its pale tint. */
+/**
+ * The month drawn one of two ways, switched by the pill in the header: when the money went
+ * (a bar per day) or what it went on (a donut of categories). One card rather than two, so
+ * the page does not grow and the switch sits right next to what it changes.
+ */
 @Composable
-private fun DailySpendCard(state: TrendsState, window: com.abi.expensetracker.data.MonthWindow) {
+private fun ChartCard(
+    state: TrendsState,
+    window: com.abi.expensetracker.data.MonthWindow,
+    chart: TrendsChart,
+    onChart: (TrendsChart) -> Unit
+) {
     LedgerCard {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(
-                        Icons.Filled.BarChart, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)
-                    )
-                    Text("Daily spend", style = MaterialTheme.typography.titleMedium)
-                }
-                Text(
-                    "${state.recordedDays} days recorded",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Icon(
+                    if (chart == TrendsChart.PIE) Icons.Filled.PieChart else Icons.Filled.BarChart,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp)
                 )
-            }
-
-            SpendBars(state.daily, state.busiestDay?.day, Modifier.fillMaxWidth().height(150.dp), growKey = window.firstDay)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                // Every fifth day labelled; thirty labels would not fit and say no more.
-                listOf(1, 5, 10, 15, 20, 25, state.daily.size).distinct().forEach { d ->
+                Column(Modifier.weight(1f)) {
                     Text(
-                        "$d",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (d == state.busiestDay?.day) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant
+                        if (chart == TrendsChart.PIE) "By category" else "Daily spend",
+                        style = MaterialTheme.typography.titleMedium
                     )
-                }
-            }
-
-            state.busiestDay?.let { peak ->
-                Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainer) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("●  ", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                    if (chart == TrendsChart.BARS) {
                         Text(
-                            "Busiest day: " + CalendarDates.dayLabel(window.firstDay.plusDays(peak.day - 1L), window.nepali)
-                                .substringBefore(" · "),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            Money.format(peak.amountMinor),
-                            style = MaterialTheme.typography.titleSmall.merge(LocalTabularStyle.current),
-                            color = MaterialTheme.colorScheme.primary
+                            "${state.recordedDays} days recorded",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                }
+                ChartSwitch(chart, onChart)
+            }
+            AnimatedContent(
+                targetState = chart,
+                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                label = "trends chart"
+            ) { shown ->
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (shown == TrendsChart.PIE) CategoryDonut(state, window)
+                    else DailyBars(state, window)
                 }
             }
         }
     }
+}
+
+/** Both choices always visible, the current one filled with the accent. */
+@Composable
+private fun ChartSwitch(chart: TrendsChart, onChart: (TrendsChart) -> Unit) {
+    Row(
+        Modifier
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest, PillShape)
+            .padding(2.dp)
+    ) {
+        listOf(
+            Triple(TrendsChart.BARS, Icons.Filled.BarChart, "Daily bars"),
+            Triple(TrendsChart.PIE, Icons.Filled.PieChart, "Category pie")
+        ).forEach { (option, icon, label) ->
+            val on = option == chart
+            Box(
+                Modifier
+                    .size(width = 38.dp, height = 30.dp)
+                    .background(if (on) MaterialTheme.colorScheme.primary else Color.Transparent, PillShape)
+                    .selectable(selected = on, role = Role.Tab, onClick = { onChart(option) }),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon, contentDescription = label,
+                    tint = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+/** One bar per day of the month, the busiest in the accent, the rest in its pale tint. */
+@Composable
+private fun DailyBars(state: TrendsState, window: com.abi.expensetracker.data.MonthWindow) {
+    SpendBars(state.daily, state.busiestDay?.day, Modifier.fillMaxWidth().height(150.dp), growKey = window.firstDay)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        // Every fifth day labelled; thirty labels would not fit and say no more.
+        listOf(1, 5, 10, 15, 20, 25, state.daily.size).distinct().forEach { d ->
+            Text(
+                "$d",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (d == state.busiestDay?.day) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+
+    state.busiestDay?.let { peak ->
+        Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainer) {
+            Row(
+                Modifier.fillMaxWidth().padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("●  ", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Busiest day: " + CalendarDates.dayLabel(window.firstDay.plusDays(peak.day - 1L), window.nepali)
+                        .substringBefore(" · "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    Money.format(peak.amountMinor),
+                    style = MaterialTheme.typography.titleSmall.merge(LocalTabularStyle.current),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The month's categories as a donut, with the total in the hole. Past the sixth, the
+ * slices get too thin to see or tap, so the rest share one "Other" slice; the breakdown
+ * below still lists every category.
+ *
+ * No list of its own: the breakdown right below names every colour already. A tapped
+ * slice is picked out instead: the others dim and the hole shows its name, amount and
+ * share. Tapping it again, or the hole, goes back to the total.
+ */
+@Composable
+private fun CategoryDonut(state: TrendsState, window: com.abi.expensetracker.data.MonthWindow) {
+    val sorted = state.categories.sortedByDescending { it.amountMinor }
+    val otherColor = MaterialTheme.colorScheme.outline.toArgb()
+    val slices = remember(sorted, otherColor) {
+        if (sorted.size <= 7) sorted
+        else {
+            val rest = sorted.drop(6)
+            sorted.take(6) + CategorySlice(
+                categoryId = null,
+                name = "Other",
+                amountMinor = rest.sumOf { it.amountMinor },
+                shareOfTotal = rest.sumOf { it.shareOfTotal.toDouble() }.toFloat(),
+                color = otherColor
+            )
+        }
+    }
+    // Cleared with the month: an index into last month's slices means nothing in this one.
+    var picked by rememberSaveable(window.firstDay) { mutableStateOf<Int?>(null) }
+    val pick = { i: Int? -> picked = if (i == picked) null else i }
+    val sum = slices.sumOf { it.amountMinor }.coerceAtLeast(1L).toFloat()
+
+    val sweep = remember(window.firstDay) { Animatable(0f) }
+    LaunchedEffect(window.firstDay) { sweep.animateTo(1f, tween(durationMillis = 450)) }
+
+    Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+        Canvas(
+            Modifier
+                .size(200.dp)
+                .clearAndSetSemantics { }
+                .pointerInput(slices) {
+                    detectTapGestures { at ->
+                        val dx = at.x - size.width / 2f
+                        val dy = at.y - size.height / 2f
+                        val outer = minOf(size.width, size.height) / 2f
+                        val distance = sqrt(dx * dx + dy * dy)
+                        if (distance < outer * 0.6f || distance > outer) {
+                            picked = null
+                            return@detectTapGestures
+                        }
+                        // Clockwise from twelve o'clock, the way the slices are laid out.
+                        val angle = (Math.toDegrees(atan2(dx, -dy).toDouble()).toFloat() + 360f) % 360f
+                        var start = 0f
+                        slices.forEachIndexed { i, slice ->
+                            val end = start + slice.amountMinor / sum * 360f
+                            if (angle < end) { pick(i); return@detectTapGestures }
+                            start = end
+                        }
+                    }
+                }
+        ) {
+            val outer = size.minDimension / 2f - 4.dp.toPx()
+            val ring = outer * 0.38f
+            // A thin gap between slices keeps neighbours with close colours apart.
+            val gap = if (slices.size > 1) 1.2f else 0f
+            var start = -90f
+            slices.forEachIndexed { i, slice ->
+                val extent = slice.amountMinor / sum * 360f * sweep.value
+                val on = picked == null || picked == i
+                // The picked slice grows outward a little, so it reads as lifted.
+                val grow = if (picked == i) 4.dp.toPx() else 0f
+                val radius = outer - ring / 2f + grow / 2f
+                if (extent > gap) {
+                    drawArc(
+                        color = Color(slice.color).copy(alpha = if (on) 1f else 0.35f),
+                        startAngle = start + gap / 2f,
+                        sweepAngle = extent - gap,
+                        useCenter = false,
+                        topLeft = Offset(center.x - radius, center.y - radius),
+                        size = Size(radius * 2f, radius * 2f),
+                        style = Stroke(width = ring + grow)
+                    )
+                }
+                start += extent
+            }
+        }
+        val chosen = picked?.let { slices.getOrNull(it) }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                chosen?.name ?: "Spent",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 110.dp)
+            )
+            Text(
+                Money.format(chosen?.amountMinor ?: state.totalMinor),
+                style = MaterialTheme.typography.titleLarge.merge(LocalTabularStyle.current),
+                color = chosen?.let { Color(it.color) } ?: MaterialTheme.colorScheme.onSurface
+            )
+            if (chosen != null) {
+                Text(
+                    "%.1f%%".format(chosen.shareOfTotal * 100),
+                    style = MaterialTheme.typography.labelSmall.merge(LocalTabularStyle.current),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+
 }
 
 /**

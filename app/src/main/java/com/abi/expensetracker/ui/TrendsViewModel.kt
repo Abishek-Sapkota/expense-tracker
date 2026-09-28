@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -38,6 +39,9 @@ data class CategorySlice(
     /** ARGB from [com.abi.expensetracker.data.CategoryColors]. */
     val color: Int
 )
+
+/** The two ways the Trends chart card draws the month. */
+enum class TrendsChart { BARS, PIE }
 
 data class TrendsState(
     val totalMinor: Long = 0L,
@@ -75,6 +79,16 @@ class TrendsViewModel(app: Application) : AndroidViewModel(app) {
     val openCategory: StateFlow<CategorySlice?> = _openCategory.asStateFlow()
 
     fun openCategory(slice: CategorySlice?) { _openCategory.value = slice }
+
+    /**
+     * Stored rather than held in the screen, so the tab opens on whichever chart the user
+     * switched to last, across restarts.
+     */
+    val chart: StateFlow<TrendsChart> = settings.trendsChart
+        .map { name -> TrendsChart.entries.firstOrNull { it.name == name } ?: TrendsChart.BARS }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, TrendsChart.BARS)
+
+    fun setChart(chart: TrendsChart) = viewModelScope.launch { settings.setTrendsChart(chart.name) }
 
     /** Uncategorised spending over all time: what the sorting screen will offer. */
     val uncategorisedCount: StateFlow<Int> = repository.observeUncategorisedDebits()

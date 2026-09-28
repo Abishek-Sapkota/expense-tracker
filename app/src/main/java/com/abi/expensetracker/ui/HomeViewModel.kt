@@ -22,6 +22,7 @@ import com.abi.expensetracker.data.model.Split
 import com.abi.expensetracker.data.model.RawMessage
 import com.abi.expensetracker.data.model.Txn
 import com.abi.expensetracker.di.ServiceLocator
+import com.abi.expensetracker.ui.components.AccountShare
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -53,7 +54,9 @@ data class TxnRow(
     /** Set when the row is marked as a loan, which takes it out of the totals. */
     val loan: LoanEntry? = null,
     /** Set when the row is a bill split with friends. */
-    val split: SplitSummary? = null
+    val split: SplitSummary? = null,
+    /** Which account's spending the row counts toward; see [HomeViewModel.accountKeyOf]. */
+    val accountKey: String = HomeViewModel.OTHER_ACCOUNT
 )
 
 data class PeriodSelection(
@@ -84,6 +87,34 @@ data class PeriodSelection(
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
+
+    companion object {
+        /** Rows added by hand with no "Paid from" account. */
+        const val CASH_ACCOUNT = "cash"
+        /** Parsed rows whose sender is not linked to any account yet. */
+        const val OTHER_ACCOUNT = "other"
+
+        /**
+         * A parsed row belongs to the account its sender resolves to, a manual row to the
+         * one picked for it; the rest fall into Cash or Unlinked.
+         */
+        fun accountKeyOf(bank: Bank?, isManual: Boolean): String = when {
+            bank != null -> "bank:${bank.id}"
+            isManual -> CASH_ACCOUNT
+            else -> OTHER_ACCOUNT
+        }
+
+        /**
+         * The account's picked colour, or its default from [CategoryColors.of]. Cash and
+         * Unlinked are not accounts the user can colour, so they keep fixed ones.
+         */
+        fun accountColor(key: String, bankById: Map<Long, Bank>): Int = when (key) {
+            CASH_ACCOUNT -> CategoryColors.PALETTE[5]
+            OTHER_ACCOUNT -> 0xFF7A8084.toInt()
+            else -> key.removePrefix("bank:").toLongOrNull()?.let { bankById[it] }
+                ?.let { CategoryColors.of(it) } ?: CategoryColors.UNCATEGORISED
+        }
+    }
 
     private val repository = ServiceLocator.repository(app)
     private val settings = SettingsStore(app)
@@ -137,7 +168,19 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     ) { splitList, loanList -> Splits.summarise(splitList, loanList) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val rows: StateFlow<List<TxnRow>> = combine(
+    /**
+     * The account the ledger is narrowed to, as an [accountKeyOf] key; null shows every
+     * account. Not saved: a fresh ledger shows everything.
+     */
+    private val _account = MutableStateFlow<String?>(null)
+    val account: StateFlow<String?> = _account.asStateFlow()
+
+    /** Tapping the picked account again goes back to all of them. */
+    fun pickAccount(key: String) { _account.value = if (_account.value == key) null else key }
+    fun clearAccount() { _account.value = null }
+
+    /** Every row of the current mode, before the account filter. */
+    private val allRows: StateFlow<List<TxnRow>> = combine(
         combine(selection, _category, searchTerm) { sel, cat, q -> Triple(sel, cat, q) }
             .flatMapLatest { (sel, cat, q) ->
                 when {
@@ -168,7 +211,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 categoryName = category?.name,
                 isManual = row.txn.isManual,
                 loan = loanByTxn[row.txn.id],
-                split = splitByTxn[row.txn.id]
+                split = splitByTxn[row.txn.id],
+                accountKey = accountKeyOf(bank, row.txn.isManual)
             )
         }
     }
@@ -176,6 +220,52 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         // any of these tables; on the main thread that was jank on a month of rows.
         .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val rows: StateFlow<List<TxnRow>> = combine(allRows, _account) { list, key ->
+        if (key == null) list else list.filter { it.accountKey == key }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * The period's spending split by account, biggest first, for the bar on the total
+     * card. Counted like the total (no loans or own-wallet transfers, split recoveries
+     * taken off the bill), so the parts add up to it. The picked account stays listed
+     * even when it spent nothing, so it can still be tapped off.
+     */
+    val accountShares: StateFlow<List<AccountShare>> = combine(
+        allRows,
+        selection.flatMapLatest { repository.observeSplitRecoveries(it.range) },
+        _account,
+        repository.observeBanks()
+    ) { list, recoveries, picked, bankList ->
+        val bankById = bankList.associateBy { it.id }
+        val recoveredByTxn = recoveries.groupBy { it.txnId }
+            .mapValues { (_, r) -> r.sumOf { it.recoveredMinor } }
+        list.groupBy { it.accountKey }
+            .map { (key, group) ->
+                val spent = group
+                    .filter { it.txn.direction == Direction.DEBIT && it.loan == null && !it.txn.isTransfer }
+                    .sumOf { it.txn.amountMinor - (recoveredByTxn[it.txn.id] ?: 0L) }
+                AccountShare(
+                    key = key,
+                    name = when (key) {
+                        CASH_ACCOUNT -> "Cash"
+                        OTHER_ACCOUNT -> "Unlinked"
+                        else -> group.first().bankName ?: "Account"
+                    },
+                    amountMinor = spent.coerceAtLeast(0L),
+                    color = accountColor(key, bankById)
+                )
+            }
+            .filter { it.amountMinor > 0L || it.key == picked }
+            .sortedByDescending { it.amountMinor }
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Money in on the picked account's rows, for the total card while one is picked. */
+    val accountReceivedMinor: StateFlow<Long> = rows.map { list ->
+        list.filter { it.txn.direction == Direction.CREDIT && it.loan == null }.sumOf { it.txn.amountMinor }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0L)
 
     /** Reports folded as duplicates in the selected period, for the ledger's chip. */
     val duplicateCount: StateFlow<Int> = selection

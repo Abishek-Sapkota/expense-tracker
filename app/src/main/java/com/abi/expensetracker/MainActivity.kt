@@ -40,6 +40,7 @@ import com.abi.expensetracker.ui.Destination
 import com.abi.expensetracker.ui.HomeScreen
 import com.abi.expensetracker.ui.LedgerBottomBar
 import com.abi.expensetracker.ui.components.AddFab
+import com.abi.expensetracker.ui.components.CountUp
 import com.abi.expensetracker.ui.OnboardingScreen
 import com.abi.expensetracker.ui.LoansScreen
 import com.abi.expensetracker.ui.SettingsScreen
@@ -62,12 +63,16 @@ class MainActivity : FragmentActivity() {
     override fun onStart() {
         super.onStart()
         AppLock.onForeground()
+        CountUp.onStart()
     }
 
     override fun onStop() {
         super.onStop()
         // Not on a rotation: the activity is rebuilt at once and must not ask again.
-        if (!isChangingConfigurations) AppLock.onBackground()
+        if (!isChangingConfigurations) {
+            AppLock.onBackground()
+            CountUp.onStop()
+        }
     }
 
     private fun unlock() {

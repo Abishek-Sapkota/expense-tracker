@@ -5,6 +5,7 @@ import com.abi.expensetracker.ui.components.CompactTextField
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import com.abi.expensetracker.data.CategoryColors
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
@@ -61,6 +62,7 @@ import com.abi.expensetracker.data.model.LimitStatus
 import com.abi.expensetracker.data.model.SpendingLimit
 import com.abi.expensetracker.ui.components.LedgerCard
 import com.abi.expensetracker.ui.components.AddFab
+import com.abi.expensetracker.ui.components.AddFabClearance
 import com.abi.expensetracker.ui.components.Monogram
 import com.abi.expensetracker.ui.components.SearchableDropdown
 import com.abi.expensetracker.ui.components.SectionHeader
@@ -91,6 +93,7 @@ fun AccountsScreen(
     /** The saved bank whose icon is being picked, or null when that picker is closed. */
     var iconPickerFor by remember { mutableStateOf<Bank?>(null) }
     var walletIdsFor by remember { mutableStateOf<Bank?>(null) }
+    var colorFor by remember { mutableStateOf<Bank?>(null) }
     /** Whether the picker for a notification app is open. */
     var addingReadApp by remember { mutableStateOf(false) }
     val readApps by vm.readApps.collectAsStateWithLifecycle()
@@ -137,7 +140,7 @@ fun AccountsScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.padding(padding).fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = AddFabClearance),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
@@ -176,6 +179,7 @@ fun AccountsScreen(
                             bank = bank,
                             onPickIcon = { iconPickerFor = bank },
                             onWalletIds = { walletIdsFor = bank },
+                            onPickColor = { colorFor = bank },
                             onDelete = { vm.deleteBank(bank.id) }
                         )
                         if (index < banks.lastIndex) {
@@ -356,6 +360,14 @@ fun AccountsScreen(
         )
     }
 
+    colorFor?.let { bank ->
+        AccountColorDialog(
+            bank = bank,
+            onDismiss = { colorFor = null },
+            onPick = { vm.setColor(bank, it); colorFor = null }
+        )
+    }
+
     walletIdsFor?.let { bank ->
         WalletIdsDialog(
             bank = bank,
@@ -363,6 +375,52 @@ fun AccountsScreen(
             onSave = { vm.setWalletIds(bank, it); walletIdsFor = null }
         )
     }
+}
+
+/**
+ * The colour an account wears in the ledger's account bar and chips. A tap picks and
+ * closes: there is nothing else in the dialog to confirm.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AccountColorDialog(bank: Bank, onDismiss: () -> Unit, onPick: (Int) -> Unit) {
+    val current = CategoryColors.of(bank)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        title = { Text("${bank.name} colour") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Marks this account's share of the spending bar on the Ledger, and its " +
+                        "filter chip.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    CategoryColors.PALETTE.forEach { option ->
+                        Box(
+                            Modifier
+                                .size(36.dp)
+                                .background(Color(option), CircleShape)
+                                .border(
+                                    if (option == current) 3.dp else 0.dp,
+                                    if (option == current) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                    CircleShape
+                                )
+                                .clickable { onPick(option) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 /**
@@ -580,6 +638,7 @@ private fun BankRow(
     bank: Bank,
     onPickIcon: () -> Unit,
     onWalletIds: () -> Unit,
+    onPickColor: () -> Unit,
     onDelete: () -> Unit
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -590,7 +649,16 @@ private fun BankRow(
     ) {
         IconButtonSwatch(icon = bank.icon, fallback = bank.name, onClick = onPickIcon)
         Column(Modifier.weight(1f)) {
-            Text(bank.name, style = MaterialTheme.typography.titleSmall)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(bank.name, style = MaterialTheme.typography.titleSmall)
+                // Its colour on the Ledger's account bar; tapping it changes it.
+                Box(
+                    Modifier
+                        .size(12.dp)
+                        .background(Color(CategoryColors.of(bank)), CircleShape)
+                        .clickable(onClickLabel = "Change colour", onClick = onPickColor)
+                )
+            }
             bank.walletIds?.let {
                 Text(
                     "Your wallet: $it",
@@ -617,6 +685,10 @@ private fun BankRow(
                 DropdownMenuItem(
                     text = { Text("Change icon") },
                     onClick = { menuOpen = false; onPickIcon() }
+                )
+                DropdownMenuItem(
+                    text = { Text("Change colour") },
+                    onClick = { menuOpen = false; onPickColor() }
                 )
                 DropdownMenuItem(
                     text = { Text("Wallet IDs") },

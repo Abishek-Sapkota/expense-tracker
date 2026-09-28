@@ -149,6 +149,11 @@ class ExpenseRepository(
         db.bankDao().insert(Bank(name = name.trim(), icon = icon?.takeIf { it.isNotBlank() }))
     }
 
+    /** Null puts [bank] back on its default colour. */
+    suspend fun setBankColor(bank: Bank, color: Int?) = withContext(Dispatchers.IO) {
+        db.bankDao().update(bank.copy(color = color))
+    }
+
     /** Every wallet ID the user set on any account; see [TransferDetector]. */
     private suspend fun ownWalletIds(): List<String> =
         db.bankDao().all().flatMap { TransferDetector.parseIds(it.walletIds) }

@@ -173,6 +173,7 @@ class BackupManager(
                 w.name("name").value(b.name)
                 w.name("icon").valueOrNull(b.icon)
                 w.name("walletIds").valueOrNull(b.walletIds)
+                b.color?.let { w.name("color").value(it.toLong()) }
                 w.endObject()
             }
             w.endArray()
@@ -627,6 +628,7 @@ class BackupManager(
         r.beginArray()
         while (r.hasNext()) {
             var id = 0L; var name = ""; var icon: String? = null; var walletIds: String? = null
+            var color: Int? = null
             r.beginObject()
             while (r.hasNext()) {
                 when (r.nextName()) {
@@ -636,11 +638,13 @@ class BackupManager(
                     "icon" -> icon = r.nextStringOrNull()
                     // Absent before schema 13, when no account knew its wallet IDs.
                     "walletIds" -> walletIds = r.nextStringOrNull()
+                    // Absent before schema 14, and for an account left on its default.
+                    "color" -> color = r.nextLong().toInt()
                     else -> r.skipValue()
                 }
             }
             r.endObject()
-            if (name.isNotEmpty()) banks += Bank(id, name, icon, walletIds)
+            if (name.isNotEmpty()) banks += Bank(id, name, icon, walletIds, color)
         }
         r.endArray()
         if (remap == null) {

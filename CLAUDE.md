@@ -40,13 +40,14 @@ convention listed here, update the matching line in the same change.
   `LoanEntry` + `LoanKind` (LENT/RECEIVED_BACK/BORROWED/PAID_BACK; free-text `person`;
   optional unique `txnId` link; `splitId` for split shares/repayments; backup since schema 8),
   `Split` (bill txn split with friends: title, total, myShare; backup since schema 9),
-  `Bank.walletIds` (user's own wallet IDs, comma separated; schema 14) and `Txn.isTransfer`
+  `Bank.walletIds` (user's own wallet IDs, comma separated; schema 14), `Bank.color`
+  (picked ARGB, null = default by id via `CategoryColors.of(bank)`; schema 15, backup 14) and `Txn.isTransfer`
   (debit loading one of them, set by `TransferDetector` on booking and by
   `ExpenseRepository.setWalletIds` over history; excluded from spending like loans; backup
   schema 13), `BankApp` (legacy packageName+bankId from the old per-account app chips; no longer
   read for resolution, only to seed `SettingsStore.notificationApps` once and for old
   backups; backup since schema 10).
-- `data/db/` — `AppDatabase` (version 14, migrations 1→14 inline; schemas in
+- `data/db/` — `AppDatabase` (version 15, migrations 1→15 inline; schemas in
   `app/schemas/`), `Daos.kt` (all DAOs; spent/received/debits/category-total queries exclude
   txns linked to a loan entry), `TxnWithSender` + query result classes.
 - `data/ExpenseRepository.kt` — single data API used by ViewModels (ingest, reparse,
@@ -126,7 +127,10 @@ convention listed here, update the matching line in the same change.
   named "Lent to X" etc., tap = edit, long-press = multi-select
   (selection top bar with Delete + confirm), search (top-bar icon; `observeSearch` over
   all time: merchant/remark/message/category text, or exact amount when the query is a
-  number; chips and hero hidden while searching), period chips (incl. `THIS_MONTH` = calendar
+  number; chips and hero hidden while searching), hero split bar + pills of the period's
+  spend by account (`HomeViewModel.accountShares`, keys `bank:<id>`/cash/other, account's
+  colour; tap a pill = filter rows and hero to that account, not saved, reset on tab
+  reselect), period chips (incl. `THIS_MONTH` = calendar
   month on the user's calendar, matching Trends), hero card,
   `ExpenseDialog` (in `ui/ExpenseDialog.kt` with `TxnLinkControls`/`SourceMessage`; shared add/edit dialog: amount, remark, direction, "Paid from" account
   dropdown for manual rows (row subtitle "Sanima · Added by you"), category dropdown with
@@ -154,13 +158,15 @@ convention listed here, update the matching line in the same change.
   `categoryView`, a keyed `HomeViewModel` put in category mode by `showCategory(range, id)`
   → `observeCategoryDebits`, loans excluded): same rows, edit popup, select/delete; Back
   returns. Daily bars are stacked by category colour; breakdown bars use category colour.
+  The chart card switches (pill in its header) between daily bars and a category donut
+  (top 6 + Other, no own list, tap a slice to pick it); the choice is `SettingsStore.trendsChart`.
 - `ui/TrendsScreen`, `TemplatesScreen`, `AccountsScreen`, `SettingsScreen` (+ ViewModels),
   `CategorySettings.kt` (category editor: name, colour, keywords).
 - `ui/components/` — `Ledger.kt` (LedgerCard, PeriodHeroCard, GroupedRow, SectionHeader,
   Monogram, banners), `SearchableDropdown` (generic filterable dropdown; nullable item
   for "none" row; optional `onCreate` row), `AppIcon`, `Permissions`.
-- `ui/AccountsScreen.kt` + VM — opened from Settings: banks in one card (⋮ menu: Change
-  icon, Wallet IDs (`WalletIdsDialog`), Delete account), one "Notifications" card (`NotificationsCard`: "Read app
+- `ui/AccountsScreen.kt` + VM — opened from Settings: banks in one card (colour dot by the name; ⋮ menu: Change
+  icon, Change colour (`AccountColorDialog`), Wallet IDs (`WalletIdsDialog`), Delete account), one "Notifications" card (`NotificationsCard`: "Read app
   notifications" switch revealing app chips + App → `AppChooserDialog` and an Allow access
   hint; "Ask what it was for" switch + Allow notifications hint), then linked SMS senders
   (search is SMS senders only).
@@ -202,6 +208,9 @@ Tests: `app/src/test/java/com/abi/expensetracker/{data,parser,notification,ui}/`
 - Motion: subtle and short (≤ 250 ms). List rows use `Modifier.animateItem()`; content that
   swaps uses `AnimatedContent` with a fade (plus a small slide for navigation). Nothing
   animates on data refresh alone except fades.
+  Exception: the Ledger hero and Trends totals count up from zero once per opening (cold
+  start or back from background, `CountUp` + `countUpMinor` in `Ledger.kt`, 1.2 s, never
+  for a zero total).
 - Comments explain *why* (design reasoning), in full prose; match that density.
 - Design reference: `design/utilitarian_ledger/DESIGN.md` (colours/type/components) and the
   per-tab mockups `design/{ledger_home,trends_tab,loans_tab,accounts_tab,settings_tab}/`.

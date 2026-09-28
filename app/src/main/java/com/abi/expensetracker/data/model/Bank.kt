@@ -23,7 +23,12 @@ data class Bank(
      * for a bank. A bank debit naming one is a transfer to themselves, not spending. See
      * [com.abi.expensetracker.data.TransferDetector].
      */
-    val walletIds: String? = null
+    val walletIds: String? = null,
+    /**
+     * ARGB the user picked for this account's slice of the ledger's account bar; null
+     * means a stable default from its id. See [com.abi.expensetracker.data.CategoryColors.of].
+     */
+    val color: Int? = null
 )
 
 /**

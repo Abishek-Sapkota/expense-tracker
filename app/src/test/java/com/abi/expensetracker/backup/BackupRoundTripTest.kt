@@ -46,7 +46,8 @@ class BackupRoundTripTest {
     private suspend fun seeded(): AppDatabase {
         val db = newDb()
         db.ruleDao().insertAll(DefaultRules.ALL)
-        db.bankDao().insert(Bank(id = 1, name = "NIC Asia"))
+        // A picked colour, so the bank comparison below covers it surviving the file.
+        db.bankDao().insert(Bank(id = 1, name = "NIC Asia", color = 0xFF3FB56A.toInt()))
         db.senderLinkDao().upsert(SenderLink("NICASIA", 1))
         db.categoryDao().insert(Category(id = 1, name = "Dining", icon = "", keywords = "cafe"))
         val repo = ExpenseRepository(context, db, settings)

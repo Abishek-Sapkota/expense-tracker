@@ -187,6 +187,8 @@ class AccountsViewModel(app: Application) : AndroidViewModel(app) {
     private val _walletStatus = MutableStateFlow<String?>(null)
     val walletStatus: StateFlow<String?> = _walletStatus.asStateFlow()
 
+    fun setColor(bank: Bank, color: Int) = viewModelScope.launch { repository.setBankColor(bank, color) }
+
     fun setWalletIds(bank: Bank, text: String) = viewModelScope.launch {
         val transfers = repository.setWalletIds(bank, text)
         _walletStatus.value = if (transfers == 0) "Wallet IDs saved. No payments load them."

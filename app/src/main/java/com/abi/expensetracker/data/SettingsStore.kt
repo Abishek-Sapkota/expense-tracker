@@ -25,6 +25,7 @@ class SettingsStore(private val context: Context) {
     private val limitAmountKey = longPreferencesKey("spendingLimitMinor")
     private val limitBasisKey = stringPreferencesKey("spendingLimitBasis")
     private val themeModeKey = stringPreferencesKey("themeMode")
+    private val trendsChartKey = stringPreferencesKey("trendsChart")
     private val neutralPaletteKey = stringPreferencesKey("neutralPalette")
     private val customAccentKey = intPreferencesKey("customAccentArgb")
     private val askUncategorisedKey = booleanPreferencesKey("askUncategorised")
@@ -181,6 +182,13 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setThemeMode(value: String) {
         context.dataStore.edit { it[themeModeKey] = value }
+    }
+
+    /** The chart Trends last showed (a `TrendsChart` name); null means the daily bars. */
+    val trendsChart: Flow<String?> = context.dataStore.data.map { it[trendsChartKey] }
+
+    suspend fun setTrendsChart(value: String) {
+        context.dataStore.edit { it[trendsChartKey] = value }
     }
 
     /** Whether a new payment no category matched gets a reply-to-name notification. On by default. */

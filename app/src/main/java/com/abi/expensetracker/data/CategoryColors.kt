@@ -1,5 +1,6 @@
 package com.abi.expensetracker.data
 
+import com.abi.expensetracker.data.model.Bank
 import com.abi.expensetracker.data.model.Category
 
 /**
@@ -43,6 +44,14 @@ object CategoryColors {
         val used = existing.map { of(it) }.toSet()
         return PALETTE.firstOrNull { it !in used } ?: PALETTE[existing.size % PALETTE.size]
     }
+
+    /**
+     * The colour picked for [bank], or a stable one from the palette by id. Stepping by 7
+     * (coprime with the palette size) puts neighbouring ids on distant hues, so the first
+     * few accounts do not come out as three shades of one colour.
+     */
+    fun of(bank: Bank): Int =
+        bank.color ?: PALETTE[(bank.id * 7 % PALETTE.size).toInt()]
 
     /** The colour picked for [category], or a stable one from the palette by id. */
     fun of(category: Category?): Int = when {

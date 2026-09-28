@@ -28,6 +28,18 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.draw.alpha
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import android.os.SystemClock
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +87,78 @@ fun LedgerCard(
 }
 
 /**
+ * When the big totals count up: once per opening of the app, which is a cold start or
+ * coming back from the background. [MainActivity] bumps [opening] on the way back in;
+ * a rotation is not a new opening.
+ */
+object CountUp {
+    var opening by mutableIntStateOf(0)
+        private set
+    private var wasAway = false
+    /** "key@opening" for the totals that have already counted up in that opening. */
+    internal val played = mutableSetOf<String>()
+
+    fun onStop() { wasAway = true }
+
+    fun onStart() {
+        if (!wasAway) return
+        wasAway = false
+        played.clear()
+        opening++
+    }
+}
+
+/**
+ * The figure to show while a big total counts up from zero to [targetMinor], or null once
+ * it is done (or never ran), when the caller shows [targetMinor] as usual.
+ *
+ * Only on opening: the first non-zero value has to arrive within a moment of the app
+ * opening or the card appearing, which is the database load. A total that becomes
+ * non-zero later (a first payment, another period) just changes, since the count would
+ * read as the payment itself, and a zero total never counts. [key] makes it once per
+ * opening for that card, so swiping between tabs does not replay it.
+ */
+@Composable
+fun countUpMinor(key: String, targetMinor: Long): Long? {
+    val opening = CountUp.opening
+    val tag = "$key@$opening"
+    val shownAt = remember(opening) { SystemClock.uptimeMillis() }
+    val progress = remember(opening) { Animatable(0f) }
+    var running by remember(opening) { mutableStateOf(false) }
+    // Read during composition as well, so the frame the value lands on already shows the
+    // count's start instead of flashing the final figure first.
+    val due = targetMinor != 0L && tag !in CountUp.played &&
+        SystemClock.uptimeMillis() - shownAt <= COUNT_UP_WINDOW_MS
+    LaunchedEffect(targetMinor, opening) {
+        if (targetMinor == 0L || tag in CountUp.played) return@LaunchedEffect
+        CountUp.played += tag
+        if (!due) return@LaunchedEffect
+        running = true
+        try {
+            progress.animateTo(1f, tween(durationMillis = 1_200, easing = FastOutSlowInEasing))
+        } finally {
+            running = false
+        }
+    }
+    if (!due && !running) return null
+    // Whole rupees on the way up: flickering paise are noise. The last frame is exact.
+    val value = (targetMinor * progress.value.toDouble()).toLong()
+    return if (progress.value >= 1f) targetMinor else value - value % 100
+}
+
+private const val COUNT_UP_WINDOW_MS = 2_000L
+
+/** One account's part of the period's spending, drawn as a slice of the hero's bar. */
+data class AccountShare(
+    /** Stable id of the account (or of Cash / Unlinked), used to pick and filter. */
+    val key: String,
+    val name: String,
+    val amountMinor: Long,
+    /** ARGB. */
+    val color: Int
+)
+
+/**
  * The hero period card: the largest number on the screen, by a wide margin.
  *
  * A Level 1 card like the rest, set apart by type rather than by inversion: the period
@@ -88,7 +172,12 @@ fun PeriodHeroCard(
     spentMinor: Long,
     receivedMinor: Long,
     modifier: Modifier = Modifier,
-    limitStatus: LimitStatus? = null
+    limitStatus: LimitStatus? = null,
+    /** The period's spending by account; the bar shows whenever any account spent. */
+    accounts: List<AccountShare> = emptyList(),
+    /** The key of the account the ledger is narrowed to, or null for all. */
+    pickedAccount: String? = null,
+    onPickAccount: (String) -> Unit = {}
 ) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     LedgerCard(modifier) {
@@ -104,14 +193,23 @@ fun PeriodHeroCard(
             Row(verticalAlignment = Alignment.Bottom) {
                 // A quick cross-fade when the total changes (a new payment, another period),
                 // so the number reads as updated rather than swapped.
-                AnimatedContent(
+                val counting = countUpMinor("ledger-hero", spentMinor)
+                if (counting != null) {
+                    Text(
+                        Money.format(counting),
+                        style = MaterialTheme.typography.displayMedium.merge(LocalTabularStyle.current),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else AnimatedContent(
                     targetState = spentMinor,
                     transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(120)) },
                     label = "spent total"
                 ) { amount ->
                     Text(
                         Money.format(amount),
-                        style = MaterialTheme.typography.displayMedium,
+                        // Tabular like the count-up, so the figure keeps its width when
+                        // the count hands over to it.
+                        style = MaterialTheme.typography.displayMedium.merge(LocalTabularStyle.current),
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -125,6 +223,12 @@ fun PeriodHeroCard(
             limitStatus?.let { status ->
                 Spacer(Modifier.height(8.dp))
                 HeroLimitBar(status)
+            }
+            // Shown even for a single account: the card coming and going between days
+            // read as a glitch, and one full stripe still names where the money went.
+            if (accounts.isNotEmpty() || pickedAccount != null) {
+                Spacer(Modifier.height(10.dp))
+                AccountSplit(accounts, pickedAccount, onPickAccount)
             }
         }
         Row(
@@ -149,6 +253,79 @@ fun PeriodHeroCard(
                 Money.formatSigned(receivedMinor, isCredit = true),
                 style = MaterialTheme.typography.titleMedium.merge(LocalTabularStyle.current),
                 color = AppTheme.finance.credit
+            )
+        }
+    }
+}
+
+/**
+ * Which account the money went out of: a bar split by account, then a pill per account
+ * with its figure. A chip filters the ledger to that account; while one is picked the
+ * other slices of the bar fade back.
+ */
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun AccountSplit(accounts: List<AccountShare>, picked: String?, onPick: (String) -> Unit) {
+    val spending = accounts.filter { it.amountMinor > 0L }
+    if (spending.isNotEmpty()) {
+        // The pills below read out the same figures.
+        Row(
+            Modifier.fillMaxWidth().height(8.dp).clip(PillShape).clearAndSetSemantics { },
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            spending.forEach { share ->
+                Box(
+                    Modifier
+                        .weight(share.amountMinor.toFloat())
+                        .fillMaxHeight()
+                        .background(
+                            Color(share.color).copy(alpha = if (picked == null || picked == share.key) 1f else 0.3f)
+                        )
+                )
+            }
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // Drawn like the period chips above, the app's other filter: the same fill, height
+        // and check when picked, so they read as tappable rather than as a legend.
+        accounts.forEach { share ->
+            val on = picked == share.key
+            FilterChip(
+                selected = on,
+                onClick = { onPick(share.key) },
+                modifier = Modifier.height(32.dp),
+                shape = ChipShape,
+                label = {
+                    Text(share.name, style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        // Whole rupees read faster in a chip; paise stay when there are some.
+                        "  " + Money.format(share.amountMinor).removeSuffix(".00"),
+                        style = MaterialTheme.typography.labelLarge.merge(LocalTabularStyle.current),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
+                // The dot ties the chip to its slice of the bar; picked, it becomes the check.
+                leadingIcon = {
+                    if (on) Icon(Icons.Default.Check, contentDescription = null, Modifier.size(16.dp))
+                    else Box(Modifier.size(8.dp).background(Color(share.color), CircleShape))
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = on,
+                    borderColor = MaterialTheme.colorScheme.outlineVariant,
+                    selectedBorderColor = MaterialTheme.colorScheme.primary
+                )
             )
         }
     }
@@ -485,6 +662,12 @@ fun DirectionalMonogram(
         glyph = glyph
     )
 }
+
+/**
+ * Bottom padding for a list under [AddFab]: the button's 56dp, its 16dp margin and a 16dp
+ * gap, so the last row can scroll clear of the button instead of ending up behind it.
+ */
+val AddFabClearance = 88.dp
 
 /**
  * The one Add button. Same place (bottom right), shape, colour and word on every screen

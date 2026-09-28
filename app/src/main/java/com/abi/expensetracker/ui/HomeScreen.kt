@@ -81,6 +81,9 @@ fun HomeScreen(
     val rows by vm.rows.collectAsStateWithLifecycle()
     val spent by vm.spentMinor.collectAsStateWithLifecycle()
     val received by vm.receivedMinor.collectAsStateWithLifecycle()
+    val accountShares by vm.accountShares.collectAsStateWithLifecycle()
+    val pickedAccount by vm.account.collectAsStateWithLifecycle()
+    val accountReceived by vm.accountReceivedMinor.collectAsStateWithLifecycle()
     val selection by vm.selection.collectAsStateWithLifecycle()
     val limitStatus by vm.limitStatus.collectAsStateWithLifecycle()
     val categories by vm.categories.collectAsStateWithLifecycle()
@@ -131,6 +134,7 @@ fun HomeScreen(
 
     OnTabReselect(resetSignal) {
         vm.closeSearch()
+        vm.clearAccount()
         showDuplicates = false
         selectedIds = emptySet()
         vm.selectPeriod(Period.TODAY)
@@ -269,7 +273,7 @@ fun HomeScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.padding(padding).fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = AddFabClearance),
             // No global gap: transaction rows butt together to read as one card, and
             // everything else carries its own bottom padding instead.
             verticalArrangement = Arrangement.spacedBy(0.dp)
@@ -299,16 +303,24 @@ fun HomeScreen(
             }
 
             if (categoryView == null && !searching) item {
+                val picked = accountShares.firstOrNull { it.key == pickedAccount }
                 PeriodHeroCard(
-                    // A single day also names its date, on the calendar the user reads.
-                    periodLabel = when (selection.period) {
-                        Period.TODAY -> "Today · " + CalendarDates.fullDateLabel(LocalDate.now(), nepaliDates)
-                        Period.YESTERDAY -> "Yesterday · " +
+                    // A single day also names its date, on the calendar the user reads. A
+                    // picked account takes the date's place: the chips still show the day.
+                    periodLabel = when {
+                        picked != null -> (if (selection.period == Period.CUSTOM) selection.label
+                            else selection.period.label) + " · " + picked.name
+                        selection.period == Period.TODAY ->
+                            "Today · " + CalendarDates.fullDateLabel(LocalDate.now(), nepaliDates)
+                        selection.period == Period.YESTERDAY -> "Yesterday · " +
                             CalendarDates.fullDateLabel(LocalDate.now().minusDays(1), nepaliDates)
                         else -> selection.label
                     },
-                    spentMinor = spent,
-                    receivedMinor = received,
+                    spentMinor = if (pickedAccount != null) picked?.amountMinor ?: 0L else spent,
+                    receivedMinor = if (pickedAccount != null) accountReceived else received,
+                    accounts = accountShares,
+                    pickedAccount = pickedAccount,
+                    onPickAccount = vm::pickAccount,
                     // Measured over the limit's own window, not the selected period: a
                     // monthly limit means nothing against whatever range the chips show.
                     limitStatus = limitStatus,
@@ -457,20 +469,31 @@ fun HomeScreen(
     // Held here until Add: a new entry has no row yet for the pick to be saved on, which
     // is how the edit popup saves it. Unpicked, the remark's keywords file it as before.
     var addCategory by rememberSaveable { mutableStateOf<Long?>(null) }
+    // Kept when the form is closed by a stray tap outside it or Back, so reopening it
+    // does not lose what was typed; Cancel and Add clear it.
+    var addDraft by rememberSaveable { mutableStateOf<ExpenseDraft?>(null) }
     if (showAddDialog) {
+        val draft = addDraft
         ExpenseDialog(
             nepaliDates = nepaliDates,
             title = "Add expense",
             confirmLabel = "Add",
             accounts = banks,
+            initialBankId = draft?.bankId,
             categories = categories,
-            initialCategoryId = null,
+            initialCategoryId = addCategory,
             onCategoryChange = { addCategory = it },
             onCreateCategory = { name, done -> vm.createCategory(name, done) },
-            onDismiss = { addCategory = null; onAddDialogClose() },
+            initialAmount = draft?.amount ?: "",
+            initialRemark = draft?.remark ?: "",
+            initialDirection = draft?.direction ?: Direction.DEBIT,
+            initialDate = draft?.date ?: LocalDate.now(),
+            onDismiss = { addCategory = null; addDraft = null; onAddDialogClose() },
+            onCloseWithDraft = { addDraft = it; onAddDialogClose() },
             onConfirm = { amount, date, direction, remark, bankId ->
                 vm.addManualExpense(amount, date, direction, remark, bankId, addCategory)
                 addCategory = null
+                addDraft = null
                 onAddDialogClose()
             }
         )

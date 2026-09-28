@@ -56,4 +56,19 @@ class MigrationTest {
             }
         }
     }
+
+    @Test
+    fun `an account keeps its name and gets no colour when the colour column is added`() {
+        helper.createDatabase("banks", 14).use { db ->
+            db.execSQL("INSERT INTO banks (id, name, icon, walletIds) VALUES (1, 'Esewa', NULL, '98')")
+        }
+        helper.runMigrationsAndValidate("banks", 15, true, *AppDatabase.MIGRATIONS).use { db ->
+            db.query("SELECT name, walletIds, color FROM banks WHERE id = 1").use { c ->
+                c.moveToFirst()
+                assertEquals("Esewa", c.getString(0))
+                assertEquals("98", c.getString(1))
+                assertEquals(true, c.isNull(2))
+            }
+        }
+    }
 }

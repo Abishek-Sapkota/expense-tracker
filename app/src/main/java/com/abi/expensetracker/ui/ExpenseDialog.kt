@@ -55,6 +55,15 @@ import java.time.ZoneId
  * ledger screen that opens it.
  */
 
+/** What the add form held when it was closed by a stray tap or Back, to refill it with. */
+internal data class ExpenseDraft(
+    val amount: String,
+    val remark: String,
+    val direction: Direction,
+    val date: LocalDate,
+    val bankId: Long?
+) : java.io.Serializable
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun ExpenseDialog(
@@ -84,7 +93,13 @@ internal fun ExpenseDialog(
     initialRemark: String = "",
     initialDirection: Direction = Direction.DEBIT,
     initialDate: LocalDate = LocalDate.now(),
-    note: String? = null
+    note: String? = null,
+    /**
+     * Called instead of [onDismiss] when the form is closed by a tap outside it or Back,
+     * with what was typed. Those closes are usually accidents, so the add form keeps the
+     * draft and reopens with it; only Cancel throws it away.
+     */
+    onCloseWithDraft: ((ExpenseDraft) -> Unit)? = null
 ) {
     var amount by rememberSaveable { mutableStateOf(initialAmount) }
     var remark by rememberSaveable { mutableStateOf(initialRemark) }
@@ -92,6 +107,9 @@ internal fun ExpenseDialog(
     var date by rememberSaveable { mutableStateOf(initialDate) }
     var bankId by rememberSaveable { mutableStateOf(initialBankId) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    val closeAside: () -> Unit = {
+        onCloseWithDraft?.invoke(ExpenseDraft(amount, remark, direction, date, bankId)) ?: onDismiss()
+    }
 
 
     // Centred while the keyboard is down; slid to the top while it is up, so a field's
@@ -101,13 +119,13 @@ internal fun ExpenseDialog(
     val keyboardUp = WindowInsets.isImeVisible
     val verticalBias by animateFloatAsState(if (keyboardUp) -1f else 0f, label = "form position")
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = closeAside,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         Box(
             Modifier
                 .fillMaxSize()
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDismiss)
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = closeAside)
                 .windowInsetsPadding(WindowInsets.statusBars)
                 // The old dialog's side margins: at 16dp the boxes ran nearly edge to edge.
                 .padding(horizontal = 40.dp, vertical = 12.dp),
